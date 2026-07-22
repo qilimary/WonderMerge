@@ -1,0 +1,3614 @@
+name: Build WonderMerge APK (complete plaintext v7)
+
+# 完整 Android 项目的 18 个文件都在本 YAML 中以明文列出；没有编码或压缩封装。
+# 每个 heredoc 前都标注了源文件路径和源码行数，便于直接查看与后续修改。
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wondermerge-v7-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 必须先生成 Gradle 文件，再运行 setup-gradle；这是本版对截图报错的直接修复。
+      - name: Generate complete Android project from readable source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf generated_project
+          mkdir -p 'generated_project'
+          mkdir -p 'generated_project/app'
+          mkdir -p 'generated_project/app/src/main'
+          mkdir -p 'generated_project/app/src/main/java/com/qili/wondermerge'
+          mkdir -p 'generated_project/app/src/main/res/drawable'
+          mkdir -p 'generated_project/app/src/main/res/mipmap-anydpi-v26'
+          mkdir -p 'generated_project/app/src/main/res/values'
+
+          # FILE 01/18: build.gradle (3 lines)
+          cat > 'generated_project/build.gradle' <<'WONDERMERGE_FILE_01'
+          plugins {
+              id 'com.android.application' version '8.13.2' apply false
+          }
+          WONDERMERGE_FILE_01
+
+          # FILE 02/18: settings.gradle (18 lines)
+          cat > 'generated_project/settings.gradle' <<'WONDERMERGE_FILE_02'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          
+          rootProject.name = "WonderMerge"
+          include ':app'
+          WONDERMERGE_FILE_02
+
+          # FILE 03/18: gradle.properties (3 lines)
+          cat > 'generated_project/gradle.properties' <<'WONDERMERGE_FILE_03'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=false
+          android.nonTransitiveRClass=true
+          WONDERMERGE_FILE_03
+
+          # FILE 04/18: app/build.gradle (28 lines)
+          cat > 'generated_project/app/build.gradle' <<'WONDERMERGE_FILE_04'
+          plugins {
+              id 'com.android.application'
+          }
+          
+          android {
+              namespace 'com.qili.wondermerge'
+              compileSdk 36
+          
+              defaultConfig {
+                  applicationId 'com.qili.wondermerge'
+                  minSdk 23
+                  targetSdk 36
+                  versionCode 5
+                  versionName '2.3.0'
+              }
+          
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+          
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          WONDERMERGE_FILE_04
+
+          # FILE 05/18: app/proguard-rules.pro (1 lines)
+          cat > 'generated_project/app/proguard-rules.pro' <<'WONDERMERGE_FILE_05'
+          # 当前项目不依赖反射框架，无需额外规则。
+          WONDERMERGE_FILE_05
+
+          # FILE 06/18: app/src/main/AndroidManifest.xml (22 lines)
+          cat > 'generated_project/app/src/main/AndroidManifest.xml' <<'WONDERMERGE_FILE_06'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.VIBRATE" />
+          
+              <application
+                  android:allowBackup="true"
+                  android:hardwareAccelerated="true"
+                  android:icon="@drawable/ic_launcher"
+                  android:label="@string/app_name"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.WonderMerge">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="portrait"
+                      android:configChanges="orientation|screenSize|keyboardHidden">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          WONDERMERGE_FILE_06
+
+          # FILE 07/18: app/src/main/res/values/strings.xml (3 lines)
+          cat > 'generated_project/app/src/main/res/values/strings.xml' <<'WONDERMERGE_FILE_07'
+          <resources>
+              <string name="app_name">万象合成</string>
+          </resources>
+          WONDERMERGE_FILE_07
+
+          # FILE 08/18: app/src/main/res/values/colors.xml (3 lines)
+          cat > 'generated_project/app/src/main/res/values/colors.xml' <<'WONDERMERGE_FILE_08'
+          <resources>
+              <color name="icon_bg">#101B38</color>
+          </resources>
+          WONDERMERGE_FILE_08
+
+          # FILE 09/18: app/src/main/res/values/themes.xml (11 lines)
+          cat > 'generated_project/app/src/main/res/values/themes.xml' <<'WONDERMERGE_FILE_09'
+          <resources>
+              <style name="Theme.WonderMerge" parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:colorAccent">#FFFFFF</item>
+                  <item name="android:navigationBarColor">#101B38</item>
+                  <item name="android:windowLightNavigationBar">false</item>
+                  <item name="android:windowNoTitle">true</item>
+              </style>
+          </resources>
+          WONDERMERGE_FILE_09
+
+          # FILE 10/18: app/src/main/res/drawable/ic_launcher.xml (10 lines)
+          cat > 'generated_project/app/src/main/res/drawable/ic_launcher.xml' <<'WONDERMERGE_FILE_10'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#101B38" android:pathData="M0,0h108v108h-108z"/>
+              <path android:fillColor="#66D7FF" android:fillAlpha="0.22" android:pathData="M54,8a46,46 0,1 0,0 92a46,46 0,1 0,0 -92"/>
+              <path android:fillColor="#F4C95D" android:pathData="M54,17a18,18 0,1 0,0 36a18,18 0,1 0,0 -36"/>
+              <path android:fillColor="#78D6A3" android:pathData="M34,47a20,20 0,1 0,0 40a20,20 0,1 0,0 -40"/>
+              <path android:fillColor="#7AA7FF" android:pathData="M72,53a18,18 0,1 0,0 36a18,18 0,1 0,0 -36"/>
+              <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M45,22a7,5 0,1 0,0 10a7,5 0,1 0,0 -10"/>
+          </vector>
+          WONDERMERGE_FILE_10
+
+          # FILE 11/18: app/src/main/res/drawable/ic_launcher_foreground.xml (8 lines)
+          cat > 'generated_project/app/src/main/res/drawable/ic_launcher_foreground.xml' <<'WONDERMERGE_FILE_11'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#F4C95D" android:pathData="M54,17a18,18 0,1 0,0 36a18,18 0,1 0,0 -36"/>
+              <path android:fillColor="#78D6A3" android:pathData="M34,47a20,20 0,1 0,0 40a20,20 0,1 0,0 -40"/>
+              <path android:fillColor="#7AA7FF" android:pathData="M72,53a18,18 0,1 0,0 36a18,18 0,1 0,0 -36"/>
+              <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M45,22a7,5 0,1 0,0 10a7,5 0,1 0,0 -10"/>
+          </vector>
+          WONDERMERGE_FILE_11
+
+          # FILE 12/18: app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml (4 lines)
+          cat > 'generated_project/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml' <<'WONDERMERGE_FILE_12'
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/icon_bg" />
+              <foreground android:drawable="@drawable/ic_launcher_foreground" />
+          </adaptive-icon>
+          WONDERMERGE_FILE_12
+
+          # FILE 13/18: app/src/main/java/com/qili/wondermerge/MainActivity.java (79 lines)
+          cat > 'generated_project/app/src/main/java/com/qili/wondermerge/MainActivity.java' <<'WONDERMERGE_FILE_13'
+          package com.qili.wondermerge;
+          
+          import android.app.Activity;
+          import android.graphics.Color;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.Window;
+          import android.view.WindowInsets;
+          import android.view.WindowInsetsController;
+          import android.view.WindowManager;
+          
+          public final class MainActivity extends Activity {
+              private GameView gameView;
+          
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  requestWindowFeature(Window.FEATURE_NO_TITLE);
+                  getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                          WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                  getWindow().setStatusBarColor(Color.TRANSPARENT);
+                  getWindow().setNavigationBarColor(Color.TRANSPARENT);
+                  gameView = new GameView(this);
+                  setContentView(gameView);
+                  hideSystemUi();
+              }
+          
+              private void hideSystemUi() {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                      getWindow().setDecorFitsSystemWindows(false);
+                      WindowInsetsController controller = getWindow().getInsetsController();
+                      if (controller != null) {
+                          controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                          controller.setSystemBarsBehavior(
+                                  WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                      }
+                  } else {
+                      getWindow().getDecorView().setSystemUiVisibility(
+                              View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                      | View.SYSTEM_UI_FLAG_FULLSCREEN
+                                      | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                      | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                      | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                      | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+                  }
+              }
+          
+              @Override
+              public void onWindowFocusChanged(boolean hasFocus) {
+                  super.onWindowFocusChanged(hasFocus);
+                  if (hasFocus) hideSystemUi();
+              }
+          
+              @Override
+              protected void onResume() {
+                  super.onResume();
+                  hideSystemUi();
+                  if (gameView != null) {
+                      gameView.resumeLoop();
+                  }
+              }
+          
+              @Override
+              protected void onPause() {
+                  if (gameView != null) {
+                      gameView.pauseLoop();
+                  }
+                  super.onPause();
+              }
+          
+              @Override
+              public void onBackPressed() {
+                  if (gameView != null && gameView.handleBackPressed()) {
+                      return;
+                  }
+                  super.onBackPressed();
+              }
+          }
+          WONDERMERGE_FILE_13
+
+          # FILE 14/18: app/src/main/java/com/qili/wondermerge/ThemeData.java (102 lines)
+          cat > 'generated_project/app/src/main/java/com/qili/wondermerge/ThemeData.java' <<'WONDERMERGE_FILE_14'
+          package com.qili.wondermerge;
+          
+          import android.graphics.Color;
+          
+          final class ThemeData {
+              enum ThemeKind {
+                  FRUIT("水果", "清甜果园"),
+                  JELLYFISH("水母", "澄澈浅海"),
+                  PLANET("星球", "绚彩星环");
+          
+                  final String title;
+                  final String subtitle;
+          
+                  ThemeKind(String title, String subtitle) {
+                      this.title = title;
+                      this.subtitle = subtitle;
+                  }
+              }
+          
+              enum GameMode {
+                  RANDOM("随机模式", "投放后才揭晓下一枚"),
+                  VISIBLE("可视模式", "同时看见当前与下一枚");
+          
+                  final String title;
+                  final String subtitle;
+          
+                  GameMode(String title, String subtitle) {
+                      this.title = title;
+                      this.subtitle = subtitle;
+                  }
+              }
+          
+              static final int LEVEL_COUNT = 11;
+              static final int MAX_SPAWN_LEVEL = 4;
+          
+              static final String[][] NAMES = {
+                      {"蓝莓", "青提", "青柠", "橘子", "苹果", "蜜桃", "椰子", "哈密瓜", "菠萝", "西瓜", "皇冠西瓜"},
+                      {"水滴水母", "灯塔水母", "海月水母", "紫纹水母", "霞水母", "箱水母", "狮鬃水母", "黄金水母", "幽灵水母", "星云水母", "月神水母"},
+                      {"陨石", "月球", "水星", "火星", "金星", "地球", "海王星", "天王星", "土星", "木星", "星环太阳"}
+              };
+          
+              static final int[][] PRIMARY = {
+                      {
+                              Color.rgb(58, 82, 184), Color.rgb(135, 204, 95), Color.rgb(121, 190, 67),
+                              Color.rgb(247, 145, 34), Color.rgb(222, 41, 57), Color.rgb(255, 165, 112),
+                              Color.rgb(125, 83, 49), Color.rgb(207, 221, 119), Color.rgb(225, 176, 55),
+                              Color.rgb(48, 154, 87), Color.rgb(239, 190, 56)
+                      },
+                      {
+                              Color.rgb(64, 218, 245), Color.rgb(250, 101, 183), Color.rgb(103, 198, 248),
+                              Color.rgb(175, 111, 245), Color.rgb(255, 111, 143), Color.rgb(72, 221, 210),
+                              Color.rgb(233, 92, 169), Color.rgb(255, 204, 67), Color.rgb(170, 204, 252),
+                              Color.rgb(145, 105, 245), Color.rgb(229, 218, 255)
+                      },
+                      {
+                              Color.rgb(136, 92, 69), Color.rgb(204, 214, 228), Color.rgb(189, 146, 92),
+                              Color.rgb(225, 100, 66), Color.rgb(241, 195, 112), Color.rgb(75, 153, 226),
+                              Color.rgb(75, 128, 229), Color.rgb(137, 230, 230), Color.rgb(244, 211, 149),
+                              Color.rgb(236, 185, 128), Color.rgb(255, 193, 69)
+                      }
+              };
+          
+              static final int[][] SECONDARY = {
+                      {
+                              Color.rgb(25, 35, 94), Color.rgb(71, 138, 42), Color.rgb(44, 113, 30),
+                              Color.rgb(202, 75, 13), Color.rgb(106, 12, 28), Color.rgb(196, 70, 97),
+                              Color.rgb(71, 43, 29), Color.rgb(120, 155, 55), Color.rgb(168, 108, 24),
+                              Color.rgb(12, 88, 48), Color.rgb(174, 80, 41)
+                      },
+                      {
+                              Color.rgb(22, 121, 172), Color.rgb(181, 37, 129), Color.rgb(35, 115, 190),
+                              Color.rgb(94, 50, 184), Color.rgb(191, 40, 85), Color.rgb(20, 139, 151),
+                              Color.rgb(160, 30, 112), Color.rgb(192, 119, 16), Color.rgb(78, 105, 190),
+                              Color.rgb(68, 42, 186), Color.rgb(135, 112, 218)
+                      },
+                      {
+                              Color.rgb(57, 43, 45), Color.rgb(101, 110, 126), Color.rgb(104, 75, 52),
+                              Color.rgb(145, 55, 41), Color.rgb(174, 119, 54), Color.rgb(27, 83, 153),
+                              Color.rgb(29, 70, 157), Color.rgb(53, 167, 180), Color.rgb(171, 117, 58),
+                              Color.rgb(164, 103, 57), Color.rgb(211, 83, 27)
+                      }
+              };
+          
+              static final int[] SCORE_VALUES = {1, 3, 6, 10, 15, 21, 28, 36, 45, 60, 100};
+              // 所有主题共用同一套物理尺寸。末两级重点放大，同时逐级拉开轮廓差异。
+              static final float[] RADIUS_FACTORS = {0.043f, 0.052f, 0.062f, 0.073f, 0.086f, 0.101f, 0.118f, 0.137f, 0.159f, 0.190f, 0.232f};
+          
+              static String name(ThemeKind theme, int level) {
+                  return NAMES[theme.ordinal()][Math.max(0, Math.min(LEVEL_COUNT - 1, level))];
+              }
+          
+              static int primary(ThemeKind theme, int level) {
+                  return PRIMARY[theme.ordinal()][Math.max(0, Math.min(LEVEL_COUNT - 1, level))];
+              }
+          
+              static int secondary(ThemeKind theme, int level) {
+                  return SECONDARY[theme.ordinal()][Math.max(0, Math.min(LEVEL_COUNT - 1, level))];
+              }
+          
+              private ThemeData() {
+              }
+          }
+          WONDERMERGE_FILE_14
+
+          # FILE 15/18: app/src/main/java/com/qili/wondermerge/GameWorld.java (598 lines)
+          cat > 'generated_project/app/src/main/java/com/qili/wondermerge/GameWorld.java' <<'WONDERMERGE_FILE_15'
+          package com.qili.wondermerge;
+          
+          import java.util.ArrayList;
+          import java.util.Collections;
+          import java.util.Iterator;
+          import java.util.List;
+          import java.util.Random;
+          
+          /**
+           * 轻量级二维圆形物理世界。
+           *
+           * 使用固定 120 Hz 时间步、质量/转动惯量、库仑摩擦和低回弹接触，
+           * 让堆叠在不同刷新率的手机上都尽量稳定，同时保留合成游戏需要的柔和手感。
+           */
+          final class GameWorld {
+              private static final float FIXED_STEP = 1f / 120f;
+              private static final int MAX_STEPS_PER_FRAME = 8;
+              private static final int SOLVER_ITERATIONS = 7;
+          
+              static final class Body {
+                  long id;
+                  int level;
+                  float x;
+                  float y;
+                  float vx;
+                  float vy;
+                  float radius;
+                  float angle;
+                  float angularVelocity;
+                  float age;
+                  float squash;
+                  float impactCooldown;
+          
+                  Body(long id, int level, float x, float y, float radius) {
+                      this.id = id;
+                      this.level = level;
+                      this.x = x;
+                      this.y = y;
+                      this.radius = radius;
+                  }
+              }
+          
+              static final class Particle {
+                  float x;
+                  float y;
+                  float vx;
+                  float vy;
+                  float life;
+                  float maxLife;
+                  float size;
+                  int level;
+          
+                  Particle(float x, float y, float vx, float vy, float life, float size, int level) {
+                      this.x = x;
+                      this.y = y;
+                      this.vx = vx;
+                      this.vy = vy;
+                      this.life = life;
+                      this.maxLife = life;
+                      this.size = size;
+                      this.level = level;
+                  }
+              }
+          
+              static final class MergeEvent {
+                  final float x;
+                  final float y;
+                  final int newLevel;
+                  final int gainedScore;
+          
+                  MergeEvent(float x, float y, int newLevel, int gainedScore) {
+                      this.x = x;
+                      this.y = y;
+                      this.newLevel = newLevel;
+                      this.gainedScore = gainedScore;
+                  }
+              }
+          
+              static final class ImpactEvent {
+                  final float strength;
+          
+                  ImpactEvent(float strength) {
+                      this.strength = strength;
+                  }
+              }
+          
+              private final ArrayList<Body> bodies = new ArrayList<>();
+              private final ArrayList<Particle> particles = new ArrayList<>();
+              private final ArrayList<MergeEvent> mergeEvents = new ArrayList<>();
+              private final ArrayList<ImpactEvent> impactEvents = new ArrayList<>();
+              private final Random random = new Random();
+          
+              private float left;
+              private float right;
+              private float top;
+              private float bottom;
+              private float warningLine;
+              private float worldWidth = 1f;
+              private float gravity = 1f;
+              private float accumulator;
+              private float strongestImpact;
+              private long nextId = 1L;
+              private float dangerTime;
+              private boolean gameOver;
+              private int score;
+              private int highestLevel;
+          
+              void configure(float left, float right, float top, float bottom, float warningLine) {
+                  float oldLeft = this.left;
+                  float oldTop = this.top;
+                  float oldWidth = this.right - this.left;
+                  float oldHeight = this.bottom - this.top;
+                  float newWidth = Math.max(1f, right - left);
+                  float newHeight = Math.max(1f, bottom - top);
+                  boolean canRescale = oldWidth > 1f && oldHeight > 1f && !bodies.isEmpty();
+          
+                  this.left = left;
+                  this.right = right;
+                  this.top = top;
+                  this.bottom = bottom;
+                  this.warningLine = warningLine;
+                  this.worldWidth = newWidth;
+                  this.gravity = worldWidth * 3.72f;
+          
+                  for (Body body : bodies) {
+                      if (canRescale) {
+                          float sx = newWidth / oldWidth;
+                          float sy = newHeight / oldHeight;
+                          body.x = left + (body.x - oldLeft) * sx;
+                          body.y = top + (body.y - oldTop) * sy;
+                          body.vx *= sx;
+                          body.vy *= sy;
+                      }
+                      body.radius = radiusFor(body.level);
+                      body.x = clamp(body.x, left + body.radius, right - body.radius);
+                      body.y = Math.min(body.y, bottom - body.radius);
+                  }
+              }
+          
+              void reset() {
+                  bodies.clear();
+                  particles.clear();
+                  mergeEvents.clear();
+                  impactEvents.clear();
+                  nextId = 1L;
+                  accumulator = 0f;
+                  strongestImpact = 0f;
+                  dangerTime = 0f;
+                  gameOver = false;
+                  score = 0;
+                  highestLevel = 0;
+              }
+          
+              int randomSpawnLevel() {
+                  int roll = random.nextInt(100);
+                  if (roll < 36) return 0;
+                  if (roll < 64) return 1;
+                  if (roll < 83) return 2;
+                  if (roll < 95) return 3;
+                  return ThemeData.MAX_SPAWN_LEVEL;
+              }
+          
+              float radiusFor(int level) {
+                  int safe = Math.max(0, Math.min(ThemeData.LEVEL_COUNT - 1, level));
+                  return worldWidth * ThemeData.RADIUS_FACTORS[safe];
+              }
+          
+              float spawnYFor(int level) {
+                  return top + radiusFor(level) + worldWidth * 0.012f;
+              }
+          
+              void drop(int level, float x) {
+                  if (gameOver) return;
+                  int safeLevel = Math.max(0, Math.min(ThemeData.MAX_SPAWN_LEVEL, level));
+                  float radius = radiusFor(safeLevel);
+                  Body body = new Body(nextId++, safeLevel,
+                          clamp(x, left + radius, right - radius), spawnYFor(safeLevel), radius);
+                  // 不再给物体随机自转；转动只由真实的切向碰撞和滚动产生。
+                  body.vy = worldWidth * 0.035f;
+                  body.impactCooldown = 0.09f;
+                  bodies.add(body);
+                  highestLevel = Math.max(highestLevel, safeLevel);
+              }
+          
+              void update(float dt) {
+                  if (dt <= 0f) return;
+                  float frameTime = Math.min(dt, 0.05f);
+                  strongestImpact = 0f;
+          
+                  if (!gameOver) {
+                      accumulator += frameTime;
+                      int steps = 0;
+                      while (accumulator >= FIXED_STEP && steps < MAX_STEPS_PER_FRAME) {
+                          updateStep(FIXED_STEP);
+                          accumulator -= FIXED_STEP;
+                          steps++;
+                      }
+                      if (steps == MAX_STEPS_PER_FRAME && accumulator >= FIXED_STEP) {
+                          // 严重卡顿时丢弃过旧时间，避免恢复后物体突然“爆炸式”穿透。
+                          accumulator = 0f;
+                      }
+                  } else {
+                      accumulator = 0f;
+                  }
+          
+                  if (strongestImpact > 0f) {
+                      impactEvents.add(new ImpactEvent(strongestImpact));
+                  }
+                  updateParticles(frameTime);
+                  updateDanger(frameTime);
+              }
+          
+              private void updateStep(float dt) {
+                  float terminalSpeed = worldWidth * 3.25f;
+                  float linearDamping = (float) Math.pow(0.9985, dt * 60f);
+                  float angularDamping = (float) Math.pow(0.940, dt * 60f);
+          
+                  for (Body body : bodies) {
+                      body.age += dt;
+                      body.impactCooldown = Math.max(0f, body.impactCooldown - dt);
+                      body.vy = Math.min(terminalSpeed, body.vy + gravity * dt);
+                      body.vx *= linearDamping;
+                      body.angularVelocity *= angularDamping;
+                      body.angularVelocity = clamp(body.angularVelocity, -4.2f, 4.2f);
+                      body.x += body.vx * dt;
+                      body.y += body.vy * dt;
+                      body.angle = wrapAngle(body.angle + body.angularVelocity * dt);
+                      body.squash *= (float) Math.pow(0.050, dt);
+                      resolveBounds(body, true);
+                  }
+          
+                  // 同级物体接触时优先合成，再处理其余接触，避免被位置修正提前推开。
+                  for (int chain = 0; chain < 8; chain++) {
+                      if (!mergeOnePair()) break;
+                  }
+          
+                  for (int iteration = 0; iteration < SOLVER_ITERATIONS; iteration++) {
+                      resolveBodyCollisions(iteration == 0);
+                      for (Body body : bodies) {
+                          resolveBounds(body, false);
+                      }
+                  }
+          
+                  settleSlowBodies();
+              }
+          
+              private boolean mergeOnePair() {
+                  Body bestA = null;
+                  Body bestB = null;
+                  float bestPenetration = 0f;
+          
+                  for (int i = 0; i < bodies.size(); i++) {
+                      Body a = bodies.get(i);
+                      if (a.level >= ThemeData.LEVEL_COUNT - 1) continue;
+                      for (int j = i + 1; j < bodies.size(); j++) {
+                          Body b = bodies.get(j);
+                          if (a.level != b.level) continue;
+                          float dx = b.x - a.x;
+                          float dy = b.y - a.y;
+                          float sum = a.radius + b.radius;
+                          float distSq = dx * dx + dy * dy;
+                          if (distSq >= sum * sum) continue;
+                          float dist = (float) Math.sqrt(Math.max(0.0001f, distSq));
+                          float penetration = sum - dist;
+                          if (penetration > bestPenetration) {
+                              bestPenetration = penetration;
+                              bestA = a;
+                              bestB = b;
+                          }
+                      }
+                  }
+          
+                  if (bestA == null) return false;
+                  mergeBodies(bestA, bestB);
+                  return true;
+              }
+          
+              private void mergeBodies(Body a, Body b) {
+                  int newLevel = a.level + 1;
+                  float massA = massFor(a);
+                  float massB = massFor(b);
+                  float totalMass = massA + massB;
+                  float nx = (a.x * massA + b.x * massB) / totalMass;
+                  float ny = (a.y * massA + b.y * massB) / totalMass;
+                  float nvx = (a.vx * massA + b.vx * massB) / totalMass * 0.72f;
+                  float nvy = (a.vy * massA + b.vy * massB) / totalMass * 0.42f
+                          - worldWidth * 0.024f;
+                  float spin = (a.angularVelocity + b.angularVelocity) * 0.22f;
+          
+                  bodies.remove(a);
+                  bodies.remove(b);
+          
+                  Body merged = new Body(nextId++, newLevel, nx, ny, radiusFor(newLevel));
+                  merged.vx = nvx;
+                  merged.vy = nvy;
+                  merged.angularVelocity = spin;
+                  merged.age = Math.max(a.age, b.age);
+                  merged.squash = 0.105f;
+                  merged.impactCooldown = 0.12f;
+                  bodies.add(merged);
+          
+                  int gained = ThemeData.SCORE_VALUES[newLevel];
+                  score += gained;
+                  highestLevel = Math.max(highestLevel, newLevel);
+                  mergeEvents.add(new MergeEvent(nx, ny, newLevel, gained));
+          
+                  int count = 9 + newLevel * 2;
+                  for (int i = 0; i < count; i++) {
+                      float angle = (float) (Math.PI * 2.0 * i / count + random.nextFloat() * 0.28);
+                      float speed = worldWidth * (0.13f + random.nextFloat() * 0.19f);
+                      particles.add(new Particle(nx, ny,
+                              (float) Math.cos(angle) * speed,
+                              (float) Math.sin(angle) * speed,
+                              0.38f + random.nextFloat() * 0.28f,
+                              worldWidth * (0.006f + random.nextFloat() * 0.009f), newLevel));
+                  }
+              }
+          
+              private void resolveBodyCollisions(boolean reportImpact) {
+                  for (int i = 0; i < bodies.size(); i++) {
+                      Body a = bodies.get(i);
+                      for (int j = i + 1; j < bodies.size(); j++) {
+                          Body b = bodies.get(j);
+                          float dx = b.x - a.x;
+                          float dy = b.y - a.y;
+                          float sum = a.radius + b.radius;
+                          float distSq = dx * dx + dy * dy;
+                          if (distSq >= sum * sum) continue;
+          
+                          float dist;
+                          float nx;
+                          float ny;
+                          if (distSq < 0.0001f) {
+                              dist = 0.01f;
+                              nx = (a.id & 1L) == 0L ? 1f : -1f;
+                              ny = 0f;
+                          } else {
+                              dist = (float) Math.sqrt(distSq);
+                              nx = dx / dist;
+                              ny = dy / dist;
+                          }
+          
+                          float invMassA = inverseMass(a);
+                          float invMassB = inverseMass(b);
+                          float invMassTotal = invMassA + invMassB;
+          
+                          // 带容差的质量加权位置修正，反复迭代后仍不会产生明显弹射。
+                          float penetration = sum - dist;
+                          float slop = worldWidth * 0.00032f;
+                          float correction = Math.max(0f, penetration - slop) * 0.52f / invMassTotal;
+                          a.x -= nx * correction * invMassA;
+                          a.y -= ny * correction * invMassA;
+                          b.x += nx * correction * invMassB;
+                          b.y += ny * correction * invMassB;
+          
+                          float rvx = b.vx - a.vx;
+                          float rvy = b.vy - a.vy;
+                          float velocityAlongNormal = rvx * nx + rvy * ny;
+                          if (velocityAlongNormal >= 0f) continue;
+          
+                          float closingSpeed = -velocityAlongNormal;
+                          float restitution = closingSpeed > worldWidth * 0.72f ? 0.085f : 0.025f;
+                          float normalImpulse = -(1f + restitution) * velocityAlongNormal / invMassTotal;
+                          float ix = normalImpulse * nx;
+                          float iy = normalImpulse * ny;
+          
+                          float rax = nx * a.radius;
+                          float ray = ny * a.radius;
+                          float rbx = -nx * b.radius;
+                          float rby = -ny * b.radius;
+                          applyImpulse(a, -ix, -iy, rax, ray);
+                          applyImpulse(b, ix, iy, rbx, rby);
+          
+                          // 在接触点计算切向速度，让摩擦同时影响平移和转动。
+                          float avx = a.vx - a.angularVelocity * ray;
+                          float avy = a.vy + a.angularVelocity * rax;
+                          float bvx = b.vx - b.angularVelocity * rby;
+                          float bvy = b.vy + b.angularVelocity * rbx;
+                          float tx = -ny;
+                          float ty = nx;
+                          float tangentSpeed = (bvx - avx) * tx + (bvy - avy) * ty;
+                          float crossA = rax * ty - ray * tx;
+                          float crossB = rbx * ty - rby * tx;
+                          float tangentDenominator = invMassTotal
+                                  + crossA * crossA * inverseInertia(a)
+                                  + crossB * crossB * inverseInertia(b);
+                          if (tangentDenominator > 0f) {
+                              float tangentImpulse = -tangentSpeed / tangentDenominator;
+                              float maxFriction = normalImpulse * 0.38f;
+                              tangentImpulse = clamp(tangentImpulse, -maxFriction, maxFriction);
+                              float fix = tangentImpulse * tx;
+                              float fiy = tangentImpulse * ty;
+                              applyImpulse(a, -fix, -fiy, rax, ray);
+                              applyImpulse(b, fix, fiy, rbx, rby);
+                          }
+          
+                          float squash = Math.min(0.070f, closingSpeed / worldWidth * 0.050f);
+                          a.squash = Math.max(a.squash, squash);
+                          b.squash = Math.max(b.squash, squash);
+                          if (reportImpact && a.impactCooldown <= 0f && b.impactCooldown <= 0f) {
+                              recordImpact(closingSpeed);
+                              a.impactCooldown = 0.055f;
+                              b.impactCooldown = 0.055f;
+                          }
+                      }
+                  }
+              }
+          
+              private void applyImpulse(Body body, float ix, float iy, float rx, float ry) {
+                  body.vx += ix * inverseMass(body);
+                  body.vy += iy * inverseMass(body);
+                  body.angularVelocity += (rx * iy - ry * ix) * inverseInertia(body);
+              }
+          
+              private void resolveBounds(Body body, boolean reportImpact) {
+                  float r = body.radius;
+                  if (body.x - r < left) {
+                      body.x = left + r;
+                      if (body.vx < 0f) {
+                          float impact = -body.vx;
+                          body.vx = impact * 0.045f;
+                          body.angularVelocity *= 0.72f;
+                          if (reportImpact && body.impactCooldown <= 0f) {
+                              recordImpact(impact);
+                              body.impactCooldown = 0.055f;
+                          }
+                      }
+                  } else if (body.x + r > right) {
+                      body.x = right - r;
+                      if (body.vx > 0f) {
+                          float impact = body.vx;
+                          body.vx = -impact * 0.045f;
+                          body.angularVelocity *= 0.72f;
+                          if (reportImpact && body.impactCooldown <= 0f) {
+                              recordImpact(impact);
+                              body.impactCooldown = 0.055f;
+                          }
+                      }
+                  }
+          
+                  if (body.y + r > bottom) {
+                      body.y = bottom - r;
+                      if (body.vy > 0f) {
+                          float impact = body.vy;
+                          body.vy = impact > worldWidth * 0.42f ? -impact * 0.055f : 0f;
+                          body.squash = Math.max(body.squash,
+                                  Math.min(0.085f, impact / worldWidth * 0.055f));
+                          if (reportImpact && body.impactCooldown <= 0f) {
+                              recordImpact(impact);
+                              body.impactCooldown = 0.060f;
+                          }
+                      }
+          
+                      // 接触迭代会多次调用边界修正；摩擦每个物理步只施加一次。
+                      if (reportImpact) {
+                          body.vx *= 0.982f;
+                          float rollingTarget = body.vx / Math.max(1f, r);
+                          body.angularVelocity += (rollingTarget - body.angularVelocity) * 0.16f;
+                          if (Math.abs(body.vx) < worldWidth * 0.0014f) body.vx = 0f;
+                          if (body.vx == 0f && Math.abs(body.angularVelocity) < 0.030f) {
+                              body.angularVelocity = 0f;
+                          }
+                      }
+                  }
+              }
+          
+              private void settleSlowBodies() {
+                  float floorTolerance = worldWidth * 0.0008f;
+                  for (Body body : bodies) {
+                      if (body.y + body.radius >= bottom - floorTolerance) {
+                          if (Math.abs(body.vy) < worldWidth * 0.018f) body.vy = 0f;
+                          if (Math.abs(body.vx) < worldWidth * 0.0014f) body.vx = 0f;
+                      }
+                      if (Math.abs(body.angularVelocity) < 0.012f
+                              && Math.abs(body.vx) < worldWidth * 0.002f) {
+                          body.angularVelocity = 0f;
+                      }
+                  }
+              }
+          
+              private void recordImpact(float speed) {
+                  float threshold = worldWidth * 0.085f;
+                  if (speed <= threshold) return;
+                  float strength = clamp((speed - threshold) / (worldWidth * 0.95f), 0.08f, 1f);
+                  strongestImpact = Math.max(strongestImpact, strength);
+              }
+          
+              private void updateParticles(float dt) {
+                  Iterator<Particle> it = particles.iterator();
+                  while (it.hasNext()) {
+                      Particle p = it.next();
+                      p.life -= dt;
+                      if (p.life <= 0f) {
+                          it.remove();
+                          continue;
+                      }
+                      p.vy += gravity * 0.18f * dt;
+                      p.vx *= (float) Math.pow(0.963, dt * 60f);
+                      p.vy *= (float) Math.pow(0.963, dt * 60f);
+                      p.x += p.vx * dt;
+                      p.y += p.vy * dt;
+                  }
+              }
+          
+              private void updateDanger(float dt) {
+                  if (gameOver || bodies.isEmpty()) return;
+                  boolean danger = false;
+                  for (Body body : bodies) {
+                      boolean mature = body.age > 1.05f;
+                      boolean aboveLine = body.y - body.radius < warningLine;
+                      boolean nearlySettled = Math.abs(body.vy) < worldWidth * 0.48f;
+                      if (mature && aboveLine && nearlySettled) {
+                          danger = true;
+                          break;
+                      }
+                  }
+                  if (danger) {
+                      dangerTime += dt;
+                      if (dangerTime >= 2.45f) gameOver = true;
+                  } else {
+                      dangerTime = Math.max(0f, dangerTime - dt * 2.35f);
+                  }
+              }
+          
+              List<Body> bodies() {
+                  return bodies;
+              }
+          
+              List<Particle> particles() {
+                  return particles;
+              }
+          
+              List<MergeEvent> consumeMergeEvents() {
+                  if (mergeEvents.isEmpty()) return Collections.emptyList();
+                  ArrayList<MergeEvent> copy = new ArrayList<>(mergeEvents);
+                  mergeEvents.clear();
+                  return copy;
+              }
+          
+              List<ImpactEvent> consumeImpactEvents() {
+                  if (impactEvents.isEmpty()) return Collections.emptyList();
+                  ArrayList<ImpactEvent> copy = new ArrayList<>(impactEvents);
+                  impactEvents.clear();
+                  return copy;
+              }
+          
+              int score() {
+                  return score;
+              }
+          
+              int highestLevel() {
+                  return highestLevel;
+              }
+          
+              boolean isGameOver() {
+                  return gameOver;
+              }
+          
+              float dangerRatio() {
+                  return Math.min(1f, dangerTime / 2.45f);
+              }
+          
+              boolean isCrowdedNearSpawn(float x, float radius) {
+                  float spawnY = top + radius + worldWidth * 0.012f;
+                  for (Body body : bodies) {
+                      float dx = body.x - x;
+                      float dy = body.y - spawnY;
+                      float sum = body.radius + radius;
+                      if (dx * dx + dy * dy < sum * sum * 0.88f) return true;
+                  }
+                  return false;
+              }
+          
+              private static float massFor(Body body) {
+                  return Math.max(1f, body.radius * body.radius);
+              }
+          
+              private static float inverseMass(Body body) {
+                  return 1f / massFor(body);
+              }
+          
+              private static float inverseInertia(Body body) {
+                  float mass = massFor(body);
+                  float inertia = 0.5f * mass * body.radius * body.radius;
+                  return inertia > 0f ? 1f / inertia : 0f;
+              }
+          
+              private static float wrapAngle(float angle) {
+                  float twoPi = (float) (Math.PI * 2.0);
+                  if (angle > Math.PI) angle -= twoPi;
+                  if (angle < -Math.PI) angle += twoPi;
+                  return angle;
+              }
+          
+              private static float clamp(float value, float min, float max) {
+                  return Math.max(min, Math.min(max, value));
+              }
+          }
+          WONDERMERGE_FILE_15
+
+          # FILE 16/18: app/src/main/java/com/qili/wondermerge/GameAudio.java (312 lines)
+          cat > 'generated_project/app/src/main/java/com/qili/wondermerge/GameAudio.java' <<'WONDERMERGE_FILE_16'
+          package com.qili.wondermerge;
+          
+          import android.content.Context;
+          import android.media.AudioAttributes;
+          import android.media.SoundPool;
+          import android.os.SystemClock;
+          
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.IOException;
+          import java.nio.ByteBuffer;
+          import java.nio.ByteOrder;
+          import java.nio.charset.StandardCharsets;
+          import java.util.Collections;
+          import java.util.Set;
+          import java.util.concurrent.ConcurrentHashMap;
+          
+          /**
+           * 无外部素材依赖的游戏音效器。
+           * 首次启动时生成很短的 PCM 波形并交给 SoundPool，之后直接复用缓存。
+           */
+          final class GameAudio {
+              private static final int SAMPLE_RATE = 44_100;
+          
+              private final Set<Integer> loadedSounds = Collections.newSetFromMap(
+                      new ConcurrentHashMap<Integer, Boolean>());
+              private final SoundPool soundPool;
+              private final int dropSound;
+              private final int impactSound;
+              private final int mergeSound;
+              private final int jellyImpactSound;
+              private final int jellyMergeSound;
+              private final int gameOverSound;
+              private long lastImpactTime;
+          
+              GameAudio(Context context) {
+                  SoundPool pool = null;
+                  int drop = 0;
+                  int impact = 0;
+                  int merge = 0;
+                  int jellyImpact = 0;
+                  int jellyMerge = 0;
+                  int gameOver = 0;
+                  try {
+                      AudioAttributes attributes = new AudioAttributes.Builder()
+                              .setUsage(AudioAttributes.USAGE_GAME)
+                              .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                              .build();
+                      pool = new SoundPool.Builder()
+                              .setMaxStreams(6)
+                              .setAudioAttributes(attributes)
+                              .build();
+                      pool.setOnLoadCompleteListener((soundPool, sampleId, status) -> {
+                          if (status == 0) loadedSounds.add(sampleId);
+                      });
+          
+                      // 使用新缓存目录，确保升级后不会继续播放旧版偏闷的 wav。
+                      File soundDir = new File(context.getCacheDir(), "wondermerge_sounds_v4");
+                      if (!soundDir.exists() && !soundDir.mkdirs()) {
+                          throw new IOException("Unable to create sound cache");
+                      }
+                      drop = load(pool, soundDir, "drop.wav", synthDrop());
+                      impact = load(pool, soundDir, "impact_crisp.wav", synthImpact());
+                      merge = load(pool, soundDir, "merge_crisp.wav", synthMerge());
+                      jellyImpact = load(pool, soundDir, "jelly_impact_soft.wav", synthJellyImpact());
+                      jellyMerge = load(pool, soundDir, "jelly_merge_soft.wav", synthJellyMerge());
+                      gameOver = load(pool, soundDir, "game_over.wav", synthGameOver());
+                  } catch (RuntimeException | IOException ignored) {
+                      if (pool != null) pool.release();
+                      pool = null;
+                      drop = 0;
+                      impact = 0;
+                      merge = 0;
+                      jellyImpact = 0;
+                      jellyMerge = 0;
+                      gameOver = 0;
+                  }
+                  soundPool = pool;
+                  dropSound = drop;
+                  impactSound = impact;
+                  mergeSound = merge;
+                  jellyImpactSound = jellyImpact;
+                  jellyMergeSound = jellyMerge;
+                  gameOverSound = gameOver;
+              }
+          
+              void playDrop(ThemeData.ThemeKind theme) {
+                  if (theme == ThemeData.ThemeKind.JELLYFISH) {
+                      play(jellyImpactSound, 0.18f, 0.91f);
+                  } else {
+                      play(dropSound, 0.21f, 1.02f);
+                  }
+              }
+          
+              void playImpact(float strength, ThemeData.ThemeKind theme) {
+                  long now = SystemClock.uptimeMillis();
+                  if (now - lastImpactTime < 55L) return;
+                  lastImpactTime = now;
+                  float s = clamp(strength, 0f, 1f);
+                  if (theme == ThemeData.ThemeKind.JELLYFISH) {
+                      // 水母采用偏柔软、带水感的“噗”声；刻意避开高频脆响。
+                      play(jellyImpactSound, 0.20f + s * 0.33f, 0.90f + s * 0.09f);
+                  } else {
+                      play(impactSound, 0.25f + s * 0.40f, 0.98f + s * 0.12f);
+                  }
+              }
+          
+              void playMerge(int level, ThemeData.ThemeKind theme) {
+                  float normalized = clamp(level / 10f, 0f, 1f);
+                  if (theme == ThemeData.ThemeKind.JELLYFISH) {
+                      play(jellyMergeSound, 0.43f + normalized * 0.11f,
+                              Math.min(1.20f, 0.91f + level * 0.028f));
+                  } else {
+                      play(mergeSound, 0.46f + normalized * 0.14f,
+                              Math.min(1.38f, 0.96f + level * 0.038f));
+                  }
+              }
+          
+              void playGameOver() {
+                  play(gameOverSound, 0.48f, 0.96f);
+              }
+          
+              void release() {
+                  if (soundPool != null) soundPool.release();
+                  loadedSounds.clear();
+              }
+          
+              private void play(int soundId, float volume, float rate) {
+                  if (soundPool == null || soundId == 0 || !loadedSounds.contains(soundId)) return;
+                  soundPool.play(soundId, volume, volume, 1, 0, rate);
+              }
+          
+              private static int load(SoundPool pool, File directory, String name, short[] samples)
+                      throws IOException {
+                  File file = new File(directory, name);
+                  if (!file.isFile() || file.length() <= 44L) writeWave(file, samples);
+                  return pool.load(file.getAbsolutePath(), 1);
+              }
+          
+              private static void writeWave(File file, short[] samples) throws IOException {
+                  int dataBytes = samples.length * 2;
+                  ByteBuffer buffer = ByteBuffer.allocate(44 + dataBytes).order(ByteOrder.LITTLE_ENDIAN);
+                  buffer.put("RIFF".getBytes(StandardCharsets.US_ASCII));
+                  buffer.putInt(36 + dataBytes);
+                  buffer.put("WAVE".getBytes(StandardCharsets.US_ASCII));
+                  buffer.put("fmt ".getBytes(StandardCharsets.US_ASCII));
+                  buffer.putInt(16);
+                  buffer.putShort((short) 1);
+                  buffer.putShort((short) 1);
+                  buffer.putInt(SAMPLE_RATE);
+                  buffer.putInt(SAMPLE_RATE * 2);
+                  buffer.putShort((short) 2);
+                  buffer.putShort((short) 16);
+                  buffer.put("data".getBytes(StandardCharsets.US_ASCII));
+                  buffer.putInt(dataBytes);
+                  for (short sample : samples) buffer.putShort(sample);
+                  try (FileOutputStream output = new FileOutputStream(file)) {
+                      output.write(buffer.array());
+                  }
+              }
+          
+              private static short[] synthDrop() {
+                  int count = (int) (SAMPLE_RATE * 0.075f);
+                  short[] samples = new short[count];
+                  double phase = 0.0;
+                  int seed = 0x13579BDF;
+                  double smoothNoise = 0.0;
+                  for (int i = 0; i < count; i++) {
+                      double t = i / (double) SAMPLE_RATE;
+                      double frequency = 330.0 - 1550.0 * t;
+                      phase += Math.PI * 2.0 * Math.max(135.0, frequency) / SAMPLE_RATE;
+                      seed = seed * 1664525 + 1013904223;
+                      double noise = ((seed >>> 8) / (double) 0x00FFFFFF) * 2.0 - 1.0;
+                      smoothNoise = smoothNoise * 0.72 + noise * 0.28;
+                      double envelope = Math.exp(-46.0 * t) * Math.min(1.0, t * 900.0);
+                      double sample = (Math.sin(phase) * 0.72 + smoothNoise * 0.28) * envelope;
+                      samples[i] = toPcm(sample * 0.78);
+                  }
+                  return samples;
+              }
+          
+              private static short[] synthImpact() {
+                  int count = (int) (SAMPLE_RATE * 0.082f);
+                  short[] samples = new short[count];
+                  double bodyPhase = 0.0;
+                  double clickPhase = 0.0;
+                  int seed = 0x2468ACE1;
+                  double previousNoise = 0.0;
+                  for (int i = 0; i < count; i++) {
+                      double t = i / (double) SAMPLE_RATE;
+                      double bodyFrequency = Math.max(148.0, 254.0 - 1120.0 * t);
+                      double clickFrequency = Math.max(920.0, 1860.0 - 9400.0 * t);
+                      bodyPhase += Math.PI * 2.0 * bodyFrequency / SAMPLE_RATE;
+                      clickPhase += Math.PI * 2.0 * clickFrequency / SAMPLE_RATE;
+                      seed = seed * 1103515245 + 12345;
+                      double noise = ((seed >>> 9) / (double) 0x007FFFFF) * 2.0 - 1.0;
+                      double highNoise = noise - previousNoise * 0.92;
+                      previousNoise = noise;
+                      double attack = Math.min(1.0, t * 2600.0);
+                      double click = Math.sin(clickPhase) * Math.exp(-72.0 * t);
+                      double body = Math.sin(bodyPhase) * Math.exp(-36.0 * t);
+                      double tick = highNoise * Math.exp(-118.0 * t);
+                      samples[i] = toPcm((click * 0.58 + body * 0.30 + tick * 0.16)
+                              * attack * 0.90);
+                  }
+                  return samples;
+              }
+          
+              private static short[] synthMerge() {
+                  int count = (int) (SAMPLE_RATE * 0.260f);
+                  short[] samples = new short[count];
+                  double phase1 = 0.0;
+                  double phase2 = 0.0;
+                  double phase3 = 0.0;
+                  double bodyPhase = 0.0;
+                  for (int i = 0; i < count; i++) {
+                      double t = i / (double) SAMPLE_RATE;
+                      phase1 += Math.PI * 2.0 * 660.0 / SAMPLE_RATE;
+                      phase2 += Math.PI * 2.0 * 990.0 / SAMPLE_RATE;
+                      phase3 += Math.PI * 2.0 * 1320.0 / SAMPLE_RATE;
+                      bodyPhase += Math.PI * 2.0 * 196.0 / SAMPLE_RATE;
+                      double delayed2 = t - 0.040;
+                      double delayed3 = t - 0.082;
+                      double envelope1 = Math.min(1.0, t * 1100.0) * Math.exp(-12.0 * t);
+                      double envelope2 = delayed2 > 0.0
+                              ? Math.min(1.0, delayed2 * 1200.0) * Math.exp(-13.5 * delayed2) : 0.0;
+                      double envelope3 = delayed3 > 0.0
+                              ? Math.min(1.0, delayed3 * 1300.0) * Math.exp(-15.0 * delayed3) : 0.0;
+                      double ping = Math.sin(phase1) * envelope1 * 0.48
+                              + Math.sin(phase2) * envelope2 * 0.31
+                              + Math.sin(phase3) * envelope3 * 0.22;
+                      double sparkle = Math.sin(phase3 * 1.5) * Math.exp(-32.0 * t) * 0.12;
+                      double body = Math.sin(bodyPhase) * Math.exp(-30.0 * t) * 0.11;
+                      samples[i] = toPcm((ping + sparkle + body) * 0.92);
+                  }
+                  return samples;
+              }
+          
+              /** 柔和的凝胶碰撞：以低频下滑和轻微水波为主，不加入高频噪声。 */
+              private static short[] synthJellyImpact() {
+                  int count = (int) (SAMPLE_RATE * 0.145f);
+                  short[] samples = new short[count];
+                  double bodyPhase = 0.0;
+                  double waterPhase = 0.0;
+                  for (int i = 0; i < count; i++) {
+                      double t = i / (double) SAMPLE_RATE;
+                      double bodyFrequency = 248.0 - 720.0 * t;
+                      double waterFrequency = 470.0 - 980.0 * t;
+                      bodyPhase += Math.PI * 2.0 * Math.max(142.0, bodyFrequency) / SAMPLE_RATE;
+                      waterPhase += Math.PI * 2.0 * Math.max(292.0, waterFrequency) / SAMPLE_RATE;
+                      double attack = Math.min(1.0, t * 420.0);
+                      double envelope = attack * Math.exp(-23.0 * t);
+                      double wobble = 0.82 + 0.18 * Math.sin(Math.PI * 2.0 * 13.0 * t);
+                      double sample = Math.sin(bodyPhase) * 0.67
+                              + Math.sin(waterPhase) * 0.19
+                              + Math.sin(bodyPhase * 0.5) * 0.10;
+                      samples[i] = toPcm(sample * envelope * wobble * 0.76);
+                  }
+                  return samples;
+              }
+          
+              /** 水母合成音：圆润的上浮双音，起音较软，和水果/星球的清脆音区分开。 */
+              private static short[] synthJellyMerge() {
+                  int count = (int) (SAMPLE_RATE * 0.330f);
+                  short[] samples = new short[count];
+                  double phase1 = 0.0;
+                  double phase2 = 0.0;
+                  for (int i = 0; i < count; i++) {
+                      double t = i / (double) SAMPLE_RATE;
+                      double progress = t / 0.330;
+                      double frequency1 = 318.0 + 122.0 * progress;
+                      double frequency2 = 472.0 + 156.0 * progress;
+                      phase1 += Math.PI * 2.0 * frequency1 / SAMPLE_RATE;
+                      phase2 += Math.PI * 2.0 * frequency2 / SAMPLE_RATE;
+                      double attack = Math.min(1.0, t * 95.0);
+                      double envelope = attack * Math.exp(-7.8 * t);
+                      double delayed = t - 0.072;
+                      double secondEnvelope = delayed > 0.0
+                              ? Math.min(1.0, delayed * 80.0) * Math.exp(-10.0 * delayed) : 0.0;
+                      double sample = Math.sin(phase1) * envelope * 0.55
+                              + Math.sin(phase2) * envelope * 0.18
+                              + Math.sin(phase1 * 1.5) * secondEnvelope * 0.16;
+                      samples[i] = toPcm(sample * 0.72);
+                  }
+                  return samples;
+              }
+          
+              private static short[] synthGameOver() {
+                  int count = (int) (SAMPLE_RATE * 0.46f);
+                  short[] samples = new short[count];
+                  double phase = 0.0;
+                  for (int i = 0; i < count; i++) {
+                      double t = i / (double) SAMPLE_RATE;
+                      double progress = t / 0.46;
+                      double frequency = 255.0 - 142.0 * progress;
+                      phase += Math.PI * 2.0 * frequency / SAMPLE_RATE;
+                      double envelope = Math.min(1.0, t * 120.0) * Math.exp(-3.8 * t);
+                      double sample = (Math.sin(phase) * 0.72 + Math.sin(phase * 0.5) * 0.18) * envelope;
+                      samples[i] = toPcm(sample * 0.66);
+                  }
+                  return samples;
+              }
+          
+              private static short toPcm(double value) {
+                  double softened = Math.tanh(value * 1.25) / Math.tanh(1.25);
+                  return (short) Math.round(clamp((float) softened, -1f, 1f) * 32767.0);
+              }
+          
+              private static float clamp(float value, float min, float max) {
+                  return Math.max(min, Math.min(max, value));
+              }
+          }
+          WONDERMERGE_FILE_16
+
+          # FILE 17/18: app/src/main/java/com/qili/wondermerge/OrbRenderer.java (970 lines)
+          cat > 'generated_project/app/src/main/java/com/qili/wondermerge/OrbRenderer.java' <<'WONDERMERGE_FILE_17'
+          package com.qili.wondermerge;
+          
+          import android.graphics.Bitmap;
+          import android.graphics.Canvas;
+          import android.graphics.Color;
+          import android.graphics.LinearGradient;
+          import android.graphics.Paint;
+          import android.graphics.Path;
+          import android.graphics.RadialGradient;
+          import android.graphics.RectF;
+          import android.graphics.Shader;
+          
+          import java.util.LinkedHashMap;
+          import java.util.Map;
+          
+          final class OrbRenderer {
+              private static final int MAX_CACHE_ENTRIES = 44;
+          
+              private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+              private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+              private final Paint bitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG
+                      | Paint.DITHER_FLAG | Paint.FILTER_BITMAP_FLAG);
+              private final Path path = new Path();
+              private final RectF oval = new RectF();
+              private final LinkedHashMap<Long, Bitmap> orbCache =
+                      new LinkedHashMap<Long, Bitmap>(MAX_CACHE_ENTRIES, 0.75f, true) {
+                          @Override
+                          protected boolean removeEldestEntry(Map.Entry<Long, Bitmap> eldest) {
+                              if (size() <= MAX_CACHE_ENTRIES) return false;
+                              Bitmap bitmap = eldest.getValue();
+                              if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
+                              return true;
+                          }
+                      };
+          
+              OrbRenderer() {
+                  stroke.setStyle(Paint.Style.STROKE);
+                  stroke.setStrokeCap(Paint.Cap.ROUND);
+                  stroke.setStrokeJoin(Paint.Join.ROUND);
+              }
+          
+              void draw(Canvas canvas, ThemeData.ThemeKind theme, int level,
+                        float x, float y, float radius, float angle, int alpha, boolean preview) {
+                  int safeAlpha = Math.max(0, Math.min(255, alpha));
+                  // Paint 会在大量绘制路径间复用；每颗球开始前显式复位，避免残留 alpha/filter。
+                  paint.setAlpha(255);
+                  stroke.setAlpha(255);
+                  bitmapPaint.setColorFilter(null);
+                  bitmapPaint.setAlpha(safeAlpha);
+                  canvas.save();
+                  canvas.translate(x, y);
+          
+                  float shadowOffset = radius * 0.10f;
+                  paint.setShader(null);
+                  paint.setStyle(Paint.Style.FILL);
+                  int shadowAlpha;
+                  int shadowColor;
+                  if (theme == ThemeData.ThemeKind.JELLYFISH) {
+                      shadowAlpha = (int) (safeAlpha * 0.17f);
+                      shadowColor = Color.rgb(10, 75, 105);
+                  } else if (theme == ThemeData.ThemeKind.PLANET) {
+                      shadowAlpha = (int) (safeAlpha * 0.20f);
+                      shadowColor = Color.rgb(10, 12, 40);
+                  } else {
+                      shadowAlpha = (int) (safeAlpha * 0.22f);
+                      shadowColor = Color.BLACK;
+                  }
+                  // 预览与落下后的阴影完全一致，避免松手那一帧突然变深。
+                  paint.setColor(withAlpha(shadowColor, shadowAlpha));
+                  canvas.drawOval(-radius * 0.82f, radius * 0.72f + shadowOffset,
+                          radius * 0.82f, radius * 1.02f + shadowOffset, paint);
+          
+                  // 阴影固定在地面方向，不跟着物体旋转；视觉上更符合重力场。
+                  canvas.rotate((float) Math.toDegrees(angle));
+                  Bitmap bitmap = obtainOrb(theme, level, radius);
+                  if (bitmap != null) {
+                      canvas.drawBitmap(bitmap, -bitmap.getWidth() * 0.5f,
+                              -bitmap.getHeight() * 0.5f, bitmapPaint);
+                  } else {
+                      // 极端低内存设备仍可直接绘制，不因缓存申请失败而崩溃。
+                      drawOrbArt(canvas, theme, level, radius, safeAlpha);
+                  }
+                  canvas.restore();
+              }
+          
+              void clearCache() {
+                  for (Bitmap bitmap : orbCache.values()) {
+                      if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
+                  }
+                  orbCache.clear();
+              }
+          
+              private Bitmap obtainOrb(ThemeData.ThemeKind theme, int level, float radius) {
+                  int safeLevel = Math.max(0, Math.min(10, level));
+                  int radiusKey = Math.max(2, Math.round(radius * 2f));
+                  long key = ((long) theme.ordinal() << 56)
+                          | ((long) safeLevel << 48)
+                          | (radiusKey & 0xffffffffL);
+                  Bitmap cached = orbCache.get(key);
+                  if (cached != null && !cached.isRecycled()) return cached;
+          
+                  float renderedRadius = radiusKey * 0.5f;
+                  int size = Math.max(8, (int) Math.ceil(renderedRadius * 3.45f) + 4);
+                  Bitmap bitmap;
+                  try {
+                      bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+                  } catch (OutOfMemoryError error) {
+                      clearCache();
+                      return null;
+                  }
+                  Canvas cacheCanvas = new Canvas(bitmap);
+                  cacheCanvas.translate(size * 0.5f, size * 0.5f);
+                  drawOrbArt(cacheCanvas, theme, safeLevel, renderedRadius, 255);
+                  orbCache.put(key, bitmap);
+                  return bitmap;
+              }
+          
+              private void drawOrbArt(Canvas canvas, ThemeData.ThemeKind theme,
+                                      int level, float radius, int alpha) {
+                  switch (theme) {
+                      case FRUIT:
+                          drawFruit(canvas, level, radius, alpha);
+                          break;
+                      case JELLYFISH:
+                          drawJellyfish(canvas, level, radius, alpha);
+                          break;
+                      case PLANET:
+                          drawPlanet(canvas, level, radius, alpha);
+                          break;
+                  }
+              }
+          
+              private void drawFruit(Canvas canvas, int level, float r, int alpha) {
+                  int primary = ThemeData.primary(ThemeData.ThemeKind.FRUIT, level);
+                  int secondary = ThemeData.secondary(ThemeData.ThemeKind.FRUIT, level);
+                  int light = mix(primary, Color.WHITE, 0.32f);
+                  paint.setStyle(Paint.Style.FILL);
+                  paint.setShader(new RadialGradient(-r * 0.36f, -r * 0.42f, r * 1.52f,
+                          new int[]{withAlpha(light, alpha), withAlpha(primary, alpha), withAlpha(secondary, alpha)},
+                          new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
+                  canvas.drawCircle(0f, 0f, r, paint);
+                  paint.setShader(null);
+          
+                  // 细腻的边缘反光和体积暗部。
+                  stroke.setStrokeWidth(Math.max(1.2f, r * 0.035f));
+                  stroke.setColor(withAlpha(mix(primary, Color.WHITE, 0.48f), (int) (alpha * 0.68f)));
+                  oval.set(-r * 0.93f, -r * 0.93f, r * 0.93f, r * 0.93f);
+                  canvas.drawArc(oval, 202f, 112f, false, stroke);
+                  stroke.setColor(withAlpha(Color.BLACK, (int) (alpha * 0.30f)));
+                  canvas.drawArc(oval, 18f, 120f, false, stroke);
+          
+                  canvas.save();
+                  path.reset();
+                  path.addCircle(0f, 0f, r * 0.965f, Path.Direction.CW);
+                  canvas.clipPath(path);
+                  switch (level) {
+                      case 0:
+                          drawBlueberry(canvas, r, alpha);
+                          break;
+                      case 1:
+                          drawGrape(canvas, r, alpha);
+                          break;
+                      case 2:
+                          drawCitrus(canvas, r, alpha, true);
+                          break;
+                      case 3:
+                          drawCitrus(canvas, r, alpha, false);
+                          break;
+                      case 4:
+                          drawApple(canvas, r, alpha);
+                          break;
+                      case 5:
+                          drawPeach(canvas, r, alpha);
+                          break;
+                      case 6:
+                          drawCoconut(canvas, r, alpha);
+                          break;
+                      case 7:
+                          drawMelon(canvas, r, alpha);
+                          break;
+                      case 8:
+                          drawPineapple(canvas, r, alpha);
+                          break;
+                      case 9:
+                      case 10:
+                          drawWatermelon(canvas, r, alpha, level == 10);
+                          break;
+                      default:
+                          break;
+                  }
+                  canvas.restore();
+          
+                  stroke.setStrokeWidth(Math.max(1.1f, r * 0.030f));
+                  stroke.setColor(withAlpha(mix(secondary, Color.BLACK, 0.20f),
+                          (int) (alpha * 0.58f)));
+                  canvas.drawCircle(0f, 0f, r * 0.982f, stroke);
+          
+                  // 顶部叶片或果蒂放在裁剪区之外。
+                  if (level == 1 || level == 4) {
+                      drawStemAndLeaf(canvas, r, alpha, level);
+                  } else if (level == 5) {
+                      drawPeachLeaf(canvas, r, alpha);
+                  } else if (level == 8) {
+                      drawPineappleCrown(canvas, r, alpha);
+                  } else if (level == 10) {
+                      drawCrown(canvas, r, alpha);
+                  }
+          
+                  paint.setShader(new RadialGradient(-r * 0.36f, -r * 0.48f, r * 0.46f,
+                          withAlpha(Color.WHITE, (int) (alpha * 0.72f)),
+                          withAlpha(Color.WHITE, 0), Shader.TileMode.CLAMP));
+                  canvas.drawOval(-r * 0.65f, -r * 0.76f, r * 0.08f, -r * 0.12f, paint);
+                  paint.setShader(null);
+              }
+          
+              private void drawBlueberry(Canvas canvas, float r, int alpha) {
+                  paint.setColor(withAlpha(Color.rgb(32, 40, 92), (int) (alpha * 0.9f)));
+                  path.reset();
+                  for (int i = 0; i < 10; i++) {
+                      double a = -Math.PI / 2 + i * Math.PI / 5;
+                      float rr = (i & 1) == 0 ? r * 0.29f : r * 0.13f;
+                      float px = (float) Math.cos(a) * rr;
+                      float py = -r * 0.68f + (float) Math.sin(a) * rr;
+                      if (i == 0) path.moveTo(px, py); else path.lineTo(px, py);
+                  }
+                  path.close();
+                  canvas.drawPath(path, paint);
+                  paint.setColor(withAlpha(Color.rgb(103, 129, 216), (int) (alpha * 0.45f)));
+                  canvas.drawCircle(0f, -r * 0.68f, r * 0.09f, paint);
+                  drawPores(canvas, r, alpha, Color.rgb(123, 143, 210), 10, 0.018f);
+              }
+          
+              private void drawGrape(Canvas canvas, float r, int alpha) {
+                  // 用独立果粒、轮廓和高光替代旧版的一团暗色圆点，层次更清晰。
+                  for (int row = 0; row < 4; row++) {
+                      int count = row < 2 ? 4 : 5 - row;
+                      float grapeRadius = r * 0.235f;
+                      float y = -r * 0.48f + row * r * 0.30f;
+                      for (int col = 0; col < count; col++) {
+                          float x = (col - (count - 1) * 0.5f) * r * 0.32f
+                                  + (row % 2 == 0 ? -r * 0.025f : r * 0.025f);
+                          paint.setShader(new RadialGradient(x - grapeRadius * 0.34f,
+                                  y - grapeRadius * 0.42f, grapeRadius * 1.48f,
+                                  new int[]{withAlpha(Color.rgb(237, 255, 186), alpha),
+                                          withAlpha(Color.rgb(122, 193, 66), alpha),
+                                          withAlpha(Color.rgb(42, 103, 42), alpha)},
+                                  new float[]{0f, 0.48f, 1f}, Shader.TileMode.CLAMP));
+                          canvas.drawCircle(x, y, grapeRadius, paint);
+                          paint.setShader(null);
+                          stroke.setStrokeWidth(Math.max(0.9f, r * 0.018f));
+                          stroke.setColor(withAlpha(Color.rgb(31, 77, 36), (int) (alpha * 0.58f)));
+                          canvas.drawCircle(x, y, grapeRadius, stroke);
+                          paint.setColor(withAlpha(Color.WHITE, (int) (alpha * 0.64f)));
+                          canvas.drawCircle(x - grapeRadius * 0.34f, y - grapeRadius * 0.38f,
+                                  grapeRadius * 0.14f, paint);
+                      }
+                  }
+                  paint.setShader(null);
+              }
+          
+              private void drawCitrus(Canvas canvas, float r, int alpha, boolean lime) {
+                  int poreColor = lime ? Color.rgb(224, 247, 163) : Color.rgb(255, 213, 112);
+                  drawPores(canvas, r, alpha, poreColor, 28, 0.012f);
+                  stroke.setStrokeWidth(r * 0.022f);
+                  stroke.setColor(withAlpha(poreColor, (int) (alpha * 0.26f)));
+                  oval.set(-r * 0.72f, -r * 0.72f, r * 0.72f, r * 0.72f);
+                  canvas.drawArc(oval, 30f, 100f, false, stroke);
+              }
+          
+              private void drawApple(Canvas canvas, float r, int alpha) {
+                  // 苹果使用深红侧影、顶部凹口与双肩弧线，和橙粉色蜜桃明确区分。
+                  paint.setShader(new RadialGradient(r * 0.40f, r * 0.20f, r * 0.92f,
+                          withAlpha(Color.rgb(104, 8, 26), (int) (alpha * 0.68f)),
+                          Color.argb(0, 104, 8, 26), Shader.TileMode.CLAMP));
+                  canvas.drawCircle(r * 0.30f, r * 0.17f, r * 0.84f, paint);
+                  paint.setShader(null);
+                  drawPores(canvas, r, alpha, Color.rgb(255, 174, 118), 13, 0.010f);
+                  paint.setColor(withAlpha(Color.rgb(66, 9, 20), (int) (alpha * 0.72f)));
+                  canvas.drawOval(-r * 0.25f, -r * 1.00f, r * 0.25f, -r * 0.72f, paint);
+                  stroke.setStrokeWidth(Math.max(1f, r * 0.045f));
+                  stroke.setColor(withAlpha(Color.rgb(255, 121, 116), (int) (alpha * 0.58f)));
+                  oval.set(-r * 0.78f, -r * 0.92f, r * 0.02f, -r * 0.20f);
+                  canvas.drawArc(oval, 212f, 92f, false, stroke);
+                  oval.set(-r * 0.02f, -r * 0.92f, r * 0.78f, -r * 0.20f);
+                  canvas.drawArc(oval, 236f, 92f, false, stroke);
+              }
+          
+              private void drawPeach(Canvas canvas, float r, int alpha) {
+                  paint.setShader(new RadialGradient(r * 0.42f, r * 0.18f, r * 0.86f,
+                          withAlpha(Color.rgb(226, 76, 111), (int) (alpha * 0.62f)),
+                          Color.argb(0, 226, 76, 111), Shader.TileMode.CLAMP));
+                  canvas.drawCircle(r * 0.32f, r * 0.14f, r * 0.80f, paint);
+                  paint.setShader(null);
+                  stroke.setStrokeWidth(Math.max(1.1f, r * 0.060f));
+                  stroke.setColor(withAlpha(Color.rgb(157, 49, 82), (int) (alpha * 0.82f)));
+                  path.reset();
+                  path.moveTo(r * 0.10f, -r * 0.98f);
+                  path.cubicTo(-r * 0.18f, -r * 0.32f, r * 0.32f, r * 0.35f, r * 0.02f, r * 0.98f);
+                  canvas.drawPath(path, stroke);
+                  drawPores(canvas, r, alpha, Color.rgb(255, 236, 210), 30, 0.010f);
+              }
+          
+              private void drawPeachLeaf(Canvas canvas, float r, int alpha) {
+                  canvas.save();
+                  canvas.rotate(-17f);
+                  paint.setShader(new LinearGradient(-r * 0.58f, -r * 0.98f,
+                          r * 0.52f, -r * 0.74f,
+                          withAlpha(Color.rgb(77, 177, 68), alpha),
+                          withAlpha(Color.rgb(24, 91, 45), alpha), Shader.TileMode.CLAMP));
+                  path.reset();
+                  path.moveTo(-r * 0.58f, -r * 0.79f);
+                  path.cubicTo(-r * 0.22f, -r * 1.20f, r * 0.42f, -r * 1.06f, r * 0.58f, -r * 0.76f);
+                  path.cubicTo(r * 0.16f, -r * 0.65f, -r * 0.24f, -r * 0.68f, -r * 0.58f, -r * 0.79f);
+                  path.close();
+                  canvas.drawPath(path, paint);
+                  paint.setShader(null);
+                  stroke.setStrokeWidth(Math.max(0.9f, r * 0.022f));
+                  stroke.setColor(withAlpha(Color.rgb(211, 244, 128), (int) (alpha * 0.64f)));
+                  canvas.drawLine(-r * 0.44f, -r * 0.79f, r * 0.43f, -r * 0.81f, stroke);
+                  canvas.restore();
+              }
+          
+              private void drawCoconut(Canvas canvas, float r, int alpha) {
+                  stroke.setStrokeWidth(r * 0.018f);
+                  stroke.setColor(withAlpha(Color.rgb(219, 175, 121), (int) (alpha * 0.38f)));
+                  for (int i = -5; i <= 5; i++) {
+                      path.reset();
+                      path.moveTo(-r, i * r * 0.19f);
+                      path.cubicTo(-r * 0.35f, i * r * 0.11f - r * 0.12f,
+                              r * 0.35f, i * r * 0.11f + r * 0.12f, r, i * r * 0.19f);
+                      canvas.drawPath(path, stroke);
+                  }
+                  paint.setColor(withAlpha(Color.rgb(49, 29, 21), (int) (alpha * 0.8f)));
+                  canvas.drawCircle(-r * 0.21f, -r * 0.46f, r * 0.075f, paint);
+                  canvas.drawCircle(r * 0.06f, -r * 0.52f, r * 0.07f, paint);
+                  canvas.drawCircle(r * 0.29f, -r * 0.40f, r * 0.07f, paint);
+              }
+          
+              private void drawMelon(Canvas canvas, float r, int alpha) {
+                  stroke.setStrokeWidth(r * 0.022f);
+                  stroke.setColor(withAlpha(Color.rgb(245, 242, 182), (int) (alpha * 0.56f)));
+                  for (int i = -7; i <= 7; i++) {
+                      float offset = i * r * 0.24f;
+                      canvas.drawLine(-r, offset - r, r, offset + r, stroke);
+                      canvas.drawLine(-r, offset + r, r, offset - r, stroke);
+                  }
+                  drawPores(canvas, r, alpha, Color.rgb(98, 133, 48), 13, 0.013f);
+              }
+          
+              private void drawPineapple(Canvas canvas, float r, int alpha) {
+                  stroke.setStrokeWidth(r * 0.020f);
+                  stroke.setColor(withAlpha(Color.rgb(105, 83, 21), (int) (alpha * 0.55f)));
+                  for (int i = -6; i <= 6; i++) {
+                      float offset = i * r * 0.31f;
+                      canvas.drawLine(-r, offset - r, r, offset + r, stroke);
+                      canvas.drawLine(-r, offset + r, r, offset - r, stroke);
+                  }
+                  paint.setColor(withAlpha(Color.rgb(255, 226, 96), (int) (alpha * 0.46f)));
+                  for (int y = -2; y <= 2; y++) {
+                      for (int x = -2; x <= 2; x++) {
+                          if (x * x + y * y > 7) continue;
+                          canvas.drawCircle(x * r * 0.34f, y * r * 0.34f, r * 0.035f, paint);
+                      }
+                  }
+              }
+          
+              private void drawWatermelon(Canvas canvas, float r, int alpha, boolean royal) {
+                  stroke.setStrokeWidth(r * (royal ? 0.11f : 0.095f));
+                  stroke.setColor(withAlpha(royal ? Color.rgb(188, 88, 35) : Color.rgb(18, 91, 48),
+                          (int) (alpha * 0.72f)));
+                  for (int i = -4; i <= 4; i++) {
+                      float x = i * r * 0.28f;
+                      path.reset();
+                      path.moveTo(x * 0.45f, -r);
+                      path.cubicTo(x * 1.35f - r * 0.11f, -r * 0.30f,
+                              x * 1.35f + r * 0.11f, r * 0.30f, x * 0.45f, r);
+                      canvas.drawPath(path, stroke);
+                  }
+                  if (royal) {
+                      paint.setShader(new RadialGradient(0f, 0f, r,
+                              withAlpha(Color.rgb(255, 227, 113), (int) (alpha * 0.22f)),
+                              Color.argb(0, 255, 227, 113), Shader.TileMode.CLAMP));
+                      canvas.drawCircle(0f, 0f, r, paint);
+                      paint.setShader(null);
+                  }
+              }
+          
+              private void drawStemAndLeaf(Canvas canvas, float r, int alpha, int level) {
+                  paint.setColor(withAlpha(Color.rgb(79, 52, 23), alpha));
+                  canvas.save();
+                  canvas.rotate(level == 5 ? 12f : -8f);
+                  canvas.drawRoundRect(-r * 0.075f, -r * 1.13f, r * 0.075f, -r * 0.70f,
+                          r * 0.05f, r * 0.05f, paint);
+                  paint.setShader(new LinearGradient(0f, -r * 1.08f, r * 0.55f, -r * 0.68f,
+                          withAlpha(Color.rgb(146, 220, 80), alpha),
+                          withAlpha(Color.rgb(34, 112, 48), alpha), Shader.TileMode.CLAMP));
+                  path.reset();
+                  path.moveTo(r * 0.02f, -r * 0.94f);
+                  path.cubicTo(r * 0.28f, -r * 1.25f, r * 0.67f, -r * 1.11f, r * 0.69f, -r * 0.78f);
+                  path.cubicTo(r * 0.39f, -r * 0.69f, r * 0.17f, -r * 0.75f, r * 0.02f, -r * 0.94f);
+                  canvas.drawPath(path, paint);
+                  paint.setShader(null);
+                  canvas.restore();
+              }
+          
+              private void drawPineappleCrown(Canvas canvas, float r, int alpha) {
+                  paint.setColor(withAlpha(Color.rgb(44, 133, 60), alpha));
+                  for (int i = -3; i <= 3; i++) {
+                      float baseX = i * r * 0.15f;
+                      path.reset();
+                      path.moveTo(baseX - r * 0.13f, -r * 0.72f);
+                      path.quadTo(baseX, -r * (1.25f + 0.12f * (3 - Math.abs(i))),
+                              baseX + r * 0.14f, -r * 0.70f);
+                      path.close();
+                      canvas.drawPath(path, paint);
+                  }
+              }
+          
+              private void drawCrown(Canvas canvas, float r, int alpha) {
+                  paint.setShader(new LinearGradient(0f, -r * 1.35f, 0f, -r * 0.72f,
+                          withAlpha(Color.rgb(255, 244, 148), alpha),
+                          withAlpha(Color.rgb(219, 143, 28), alpha), Shader.TileMode.CLAMP));
+                  path.reset();
+                  path.moveTo(-r * 0.53f, -r * 0.75f);
+                  path.lineTo(-r * 0.64f, -r * 1.22f);
+                  path.lineTo(-r * 0.25f, -r * 0.98f);
+                  path.lineTo(0f, -r * 1.39f);
+                  path.lineTo(r * 0.25f, -r * 0.98f);
+                  path.lineTo(r * 0.64f, -r * 1.22f);
+                  path.lineTo(r * 0.53f, -r * 0.75f);
+                  path.close();
+                  canvas.drawPath(path, paint);
+                  paint.setShader(null);
+              }
+          
+              private void drawPores(Canvas canvas, float r, int alpha, int color, int count, float sizeFactor) {
+                  paint.setShader(null);
+                  paint.setColor(withAlpha(color, (int) (alpha * 0.35f)));
+                  for (int i = 0; i < count; i++) {
+                      double a = i * 2.399963229728653;
+                      float rr = r * (0.18f + 0.72f * ((i * 37) % 101) / 101f);
+                      float x = (float) Math.cos(a) * rr;
+                      float y = (float) Math.sin(a) * rr;
+                      canvas.drawCircle(x, y, Math.max(0.8f, r * sizeFactor * (0.7f + (i % 4) * 0.16f)), paint);
+                  }
+              }
+          
+              private void drawJellyfish(Canvas canvas, int level, float r, int alpha) {
+                  int primary = ThemeData.primary(ThemeData.ThemeKind.JELLYFISH, level);
+                  int secondary = ThemeData.secondary(ThemeData.ThemeKind.JELLYFISH, level);
+                  float pulse = 1f + (level % 3) * 0.025f;
+          
+                  paint.setShader(new RadialGradient(0f, 0f, r * 1.22f,
+                          withAlpha(mix(primary, Color.WHITE, 0.34f), (int) (alpha * 0.58f)),
+                          withAlpha(primary, 0), Shader.TileMode.CLAMP));
+                  canvas.drawCircle(0f, 0f, r * 1.18f, paint);
+                  paint.setShader(null);
+          
+                  // 伞盖：半透明渐变与内部生殖腺纹理。
+                  path.reset();
+                  if (level == 5) {
+                      // 箱水母使用近方形伞盖，不再只是换颜色和大小。
+                      path.moveTo(-r * 0.76f, r * 0.02f);
+                      path.lineTo(-r * 0.69f, -r * 0.68f);
+                      path.quadTo(0f, -r * 1.03f, r * 0.69f, -r * 0.68f);
+                      path.lineTo(r * 0.76f, r * 0.02f);
+                      path.quadTo(r * 0.38f, r * 0.16f, 0f, r * 0.08f);
+                      path.quadTo(-r * 0.38f, r * 0.16f, -r * 0.76f, r * 0.02f);
+                  } else {
+                      path.moveTo(-r * 0.82f, -r * 0.02f);
+                      path.cubicTo(-r * 0.82f, -r * 0.78f, -r * 0.38f, -r * 0.94f, 0f, -r * 0.96f);
+                      path.cubicTo(r * 0.42f, -r * 0.94f, r * 0.84f, -r * 0.70f, r * 0.82f, -r * 0.02f);
+                      path.cubicTo(r * 0.55f, r * 0.12f, r * 0.28f, r * 0.04f, 0f, r * 0.16f);
+                      path.cubicTo(-r * 0.28f, r * 0.04f, -r * 0.56f, r * 0.12f, -r * 0.82f, -r * 0.02f);
+                  }
+                  path.close();
+                  paint.setShader(new RadialGradient(-r * 0.25f, -r * 0.52f, r * 1.2f,
+                          new int[]{withAlpha(mix(primary, Color.WHITE, 0.56f), (int) (alpha * 0.98f)),
+                                  withAlpha(primary, (int) (alpha * 0.98f)),
+                                  withAlpha(secondary, alpha)},
+                          new float[]{0f, 0.46f, 1f}, Shader.TileMode.CLAMP));
+                  canvas.drawPath(path, paint);
+                  paint.setShader(null);
+          
+                  stroke.setStrokeWidth(Math.max(1.1f, r * 0.052f));
+                  stroke.setColor(withAlpha(mix(secondary, Color.rgb(14, 51, 83), 0.30f),
+                          (int) (alpha * 0.86f)));
+                  canvas.drawPath(path, stroke);
+          
+                  paint.setColor(withAlpha(mix(primary, Color.WHITE, 0.28f), (int) (alpha * 0.76f)));
+                  int lobes = 3 + level % 6;
+                  for (int i = 0; i < lobes; i++) {
+                      double a = Math.PI * 2 * i / lobes + level * 0.22;
+                      float cx = (float) Math.cos(a) * r * 0.29f;
+                      float cy = -r * 0.37f + (float) Math.sin(a) * r * 0.20f;
+                      canvas.drawOval(cx - r * 0.10f, cy - r * 0.15f, cx + r * 0.10f, cy + r * 0.15f, paint);
+                  }
+          
+                  drawJellySignature(canvas, level, r, alpha, primary, secondary);
+          
+                  // 触手使用固定的贝塞尔曲线，避免逐帧随机闪烁。
+                  int tentacles = 4 + Math.min(7, level);
+                  for (int i = 0; i < tentacles; i++) {
+                      float t = tentacles == 1 ? 0.5f : i / (float) (tentacles - 1);
+                      float sx = -r * 0.62f + t * r * 1.24f;
+                      float len = r * (0.73f + ((i * 29 + level * 11) % 7) * 0.045f);
+                      float sway = (i % 2 == 0 ? 1f : -1f) * r * (0.12f + level * 0.006f);
+                      stroke.setStrokeWidth(r * (0.027f + (i % 3) * 0.007f));
+                      stroke.setColor(withAlpha(mix(primary, secondary, 0.22f),
+                              (int) (alpha * (0.72f + (i % 2) * 0.12f))));
+                      path.reset();
+                      path.moveTo(sx, r * 0.02f);
+                      path.cubicTo(sx + sway, r * 0.32f,
+                              sx - sway * 1.25f, len * 0.72f,
+                              sx + sway * 0.55f, len);
+                      canvas.drawPath(path, stroke);
+                  }
+          
+                  // 口腕，越高级越丰盛。
+                  stroke.setStrokeWidth(r * (0.040f + level * 0.0015f));
+                  stroke.setColor(withAlpha(mix(primary, Color.WHITE, 0.60f), (int) (alpha * 0.72f)));
+                  for (int i = -1; i <= 1; i++) {
+                      path.reset();
+                      path.moveTo(i * r * 0.20f, -r * 0.02f);
+                      path.cubicTo(i * r * 0.34f + r * 0.08f, r * 0.25f,
+                              i * r * 0.09f - r * 0.06f, r * 0.56f,
+                              i * r * 0.22f, r * 0.74f * pulse);
+                      canvas.drawPath(path, stroke);
+                  }
+          
+                  paint.setShader(new RadialGradient(-r * 0.32f, -r * 0.58f, r * 0.36f,
+                          withAlpha(Color.WHITE, (int) (alpha * 0.82f)),
+                          withAlpha(Color.WHITE, 0), Shader.TileMode.CLAMP));
+                  canvas.drawOval(-r * 0.63f, -r * 0.82f, r * 0.05f, -r * 0.23f, paint);
+                  paint.setShader(null);
+              }
+          
+              private void drawJellySignature(Canvas canvas, int level, float r, int alpha,
+                                              int primary, int secondary) {
+                  paint.setShader(null);
+                  stroke.setPathEffect(null);
+                  stroke.setStrokeWidth(Math.max(1f, r * 0.035f));
+                  stroke.setColor(withAlpha(mix(secondary, Color.rgb(31, 34, 91), 0.18f),
+                          (int) (alpha * 0.72f)));
+                  paint.setColor(withAlpha(mix(secondary, Color.WHITE, 0.18f),
+                          (int) (alpha * 0.74f)));
+          
+                  switch (level) {
+                      case 0:
+                          // 水滴水母：三枚清晰水滴核心。
+                          canvas.drawCircle(0f, -r * 0.42f, r * 0.13f, paint);
+                          canvas.drawCircle(-r * 0.26f, -r * 0.26f, r * 0.075f, paint);
+                          canvas.drawCircle(r * 0.26f, -r * 0.26f, r * 0.075f, paint);
+                          break;
+                      case 1:
+                          // 灯塔水母：中轴灯柱与顶灯。
+                          canvas.drawRoundRect(-r * 0.095f, -r * 0.72f, r * 0.095f, -r * 0.18f,
+                                  r * 0.08f, r * 0.08f, paint);
+                          paint.setColor(withAlpha(Color.rgb(255, 240, 142), (int) (alpha * 0.92f)));
+                          canvas.drawCircle(0f, -r * 0.67f, r * 0.105f, paint);
+                          break;
+                      case 2:
+                          // 海月水母：经典四叶生殖腺。
+                          for (int i = 0; i < 4; i++) {
+                              double a = Math.PI * 0.5 * i + Math.PI * 0.25;
+                              float x = (float) Math.cos(a) * r * 0.21f;
+                              float y = -r * 0.38f + (float) Math.sin(a) * r * 0.18f;
+                              canvas.drawOval(x - r * 0.11f, y - r * 0.15f,
+                                      x + r * 0.11f, y + r * 0.15f, stroke);
+                          }
+                          break;
+                      case 3:
+                          // 紫纹水母：纵向放射纹。
+                          for (int i = -2; i <= 2; i++) {
+                              float x = i * r * 0.20f;
+                              path.reset();
+                              path.moveTo(x * 0.35f, -r * 0.82f);
+                              path.quadTo(x * 1.15f, -r * 0.50f, x, -r * 0.12f);
+                              canvas.drawPath(path, stroke);
+                          }
+                          break;
+                      case 4:
+                          // 霞水母：暖色放射光芒。
+                          stroke.setColor(withAlpha(Color.rgb(255, 223, 151), (int) (alpha * 0.82f)));
+                          for (int i = 0; i < 7; i++) {
+                              double a = Math.PI * 2.0 * i / 7.0;
+                              canvas.drawLine(0f, -r * 0.40f,
+                                      (float) Math.cos(a) * r * 0.48f,
+                                      -r * 0.40f + (float) Math.sin(a) * r * 0.32f, stroke);
+                          }
+                          break;
+                      case 5:
+                          // 箱水母：菱形窗口。
+                          path.reset();
+                          path.moveTo(0f, -r * 0.73f);
+                          path.lineTo(r * 0.34f, -r * 0.42f);
+                          path.lineTo(0f, -r * 0.12f);
+                          path.lineTo(-r * 0.34f, -r * 0.42f);
+                          path.close();
+                          canvas.drawPath(path, stroke);
+                          break;
+                      case 6:
+                          // 狮鬃水母：密集鬃毛圆点。
+                          for (int i = 0; i < 10; i++) {
+                              double a = Math.PI * 2.0 * i / 10.0;
+                              canvas.drawCircle((float) Math.cos(a) * r * 0.34f,
+                                      -r * 0.39f + (float) Math.sin(a) * r * 0.25f,
+                                      r * 0.055f, paint);
+                          }
+                          break;
+                      case 7:
+                          // 黄金水母：金色核心与光环。
+                          paint.setColor(withAlpha(Color.rgb(255, 238, 128), alpha));
+                          canvas.drawCircle(0f, -r * 0.40f, r * 0.18f, paint);
+                          oval.set(-r * 0.38f, -r * 0.69f, r * 0.38f, -r * 0.11f);
+                          canvas.drawOval(oval, stroke);
+                          break;
+                      case 8:
+                          // 幽灵水母：双层新月纹。
+                          oval.set(-r * 0.42f, -r * 0.70f, r * 0.42f, -r * 0.10f);
+                          canvas.drawArc(oval, 55f, 245f, false, stroke);
+                          oval.inset(r * 0.12f, r * 0.10f);
+                          canvas.drawArc(oval, 62f, 230f, false, stroke);
+                          break;
+                      case 9:
+                          // 星云水母：双旋臂。
+                          oval.set(-r * 0.45f, -r * 0.72f, r * 0.45f, -r * 0.08f);
+                          canvas.drawArc(oval, 18f, 230f, false, stroke);
+                          oval.inset(r * 0.14f, r * 0.10f);
+                          canvas.drawArc(oval, 198f, 210f, false, stroke);
+                          break;
+                      case 10:
+                      default:
+                          // 月神水母：醒目的八芒星核心。
+                          path.reset();
+                          for (int i = 0; i < 16; i++) {
+                              double a = -Math.PI / 2.0 + i * Math.PI / 8.0;
+                              float rr = (i & 1) == 0 ? r * 0.27f : r * 0.11f;
+                              float x = (float) Math.cos(a) * rr;
+                              float y = -r * 0.40f + (float) Math.sin(a) * rr;
+                              if (i == 0) path.moveTo(x, y); else path.lineTo(x, y);
+                          }
+                          path.close();
+                          canvas.drawPath(path, paint);
+                          break;
+                  }
+              }
+          
+              private void drawPlanet(Canvas canvas, int level, float r, int alpha) {
+                  int primary = ThemeData.primary(ThemeData.ThemeKind.PLANET, level);
+                  int secondary = ThemeData.secondary(ThemeData.ThemeKind.PLANET, level);
+          
+                  if (level == 10) drawSunAura(canvas, r, alpha);
+                  if (level == 8) drawSaturnBackRing(canvas, r, alpha);
+                  if (level == 10) drawSolarBackRing(canvas, r, alpha);
+          
+                  paint.setShader(new RadialGradient(0f, 0f, r * 1.18f,
+                          withAlpha(mix(primary, Color.WHITE, 0.18f), (int) (alpha * 0.38f)),
+                          withAlpha(primary, 0), Shader.TileMode.CLAMP));
+                  canvas.drawCircle(0f, 0f, r * 1.18f, paint);
+          
+                  paint.setShader(new RadialGradient(-r * 0.34f, -r * 0.40f, r * 1.48f,
+                          new int[]{withAlpha(mix(primary, Color.WHITE, 0.42f), alpha),
+                                  withAlpha(primary, alpha), withAlpha(secondary, alpha)},
+                          new float[]{0f, 0.48f, 1f}, Shader.TileMode.CLAMP));
+                  canvas.drawCircle(0f, 0f, r, paint);
+                  paint.setShader(null);
+          
+                  canvas.save();
+                  path.reset();
+                  path.addCircle(0f, 0f, r * 0.98f, Path.Direction.CW);
+                  canvas.clipPath(path);
+                  switch (level) {
+                      case 0:
+                          drawMeteorSurface(canvas, r, alpha);
+                          break;
+                      case 1:
+                          drawMoonSurface(canvas, r, alpha);
+                          break;
+                      case 2:
+                          drawMercurySurface(canvas, r, alpha);
+                          break;
+                      case 3:
+                          drawMars(canvas, r, alpha);
+                          break;
+                      case 4:
+                          drawVenus(canvas, r, alpha);
+                          break;
+                      case 5:
+                          drawEarth(canvas, r, alpha);
+                          break;
+                      case 6:
+                          drawGasBands(canvas, r, alpha, Color.rgb(67, 158, 235), false);
+                          break;
+                      case 7:
+                          drawGasBands(canvas, r, alpha, Color.rgb(174, 241, 234), false);
+                          break;
+                      case 8:
+                          drawGasBands(canvas, r, alpha, Color.rgb(234, 209, 158), false);
+                          break;
+                      case 9:
+                          drawGasBands(canvas, r, alpha, Color.rgb(236, 196, 142), true);
+                          break;
+                      case 10:
+                          drawSunSurface(canvas, r, alpha);
+                          break;
+                      default:
+                          break;
+                  }
+                  canvas.restore();
+          
+                  stroke.setStrokeWidth(Math.max(1.2f, r * 0.038f));
+                  stroke.setColor(withAlpha(mix(secondary, Color.BLACK, 0.22f), (int) (alpha * 0.68f)));
+                  canvas.drawCircle(0f, 0f, r * 0.975f, stroke);
+                  stroke.setStrokeWidth(Math.max(1.1f, r * 0.026f));
+                  stroke.setColor(withAlpha(Color.WHITE, (int) (alpha * 0.48f)));
+                  oval.set(-r * 0.95f, -r * 0.95f, r * 0.95f, r * 0.95f);
+                  canvas.drawArc(oval, 198f, 112f, false, stroke);
+                  paint.setShader(new RadialGradient(-r * 0.36f, -r * 0.44f, r * 0.40f,
+                          withAlpha(Color.WHITE, (int) (alpha * 0.66f)),
+                          withAlpha(Color.WHITE, 0), Shader.TileMode.CLAMP));
+                  canvas.drawCircle(-r * 0.31f, -r * 0.38f, r * 0.40f, paint);
+                  paint.setShader(null);
+          
+                  // 前半圈最后覆盖在球面上，才有真正环绕星球的前后空间关系。
+                  if (level == 8) drawSaturnFrontRing(canvas, r, alpha);
+                  if (level == 10) drawSolarFrontRing(canvas, r, alpha);
+              }
+          
+              private void drawMeteorSurface(Canvas canvas, float r, int alpha) {
+                  // 陨石：棱面、熔岩裂纹与不规则岩块，和圆润月球彻底分开。
+                  int[] facetColors = {
+                          Color.rgb(78, 58, 52), Color.rgb(116, 82, 65),
+                          Color.rgb(153, 105, 72), Color.rgb(62, 50, 51)
+                  };
+                  for (int i = 0; i < 7; i++) {
+                      double a = i * Math.PI * 2.0 / 7.0 + 0.26;
+                      double b = a + 0.92;
+                      path.reset();
+                      path.moveTo(0f, 0f);
+                      path.lineTo((float) Math.cos(a) * r, (float) Math.sin(a) * r);
+                      path.lineTo((float) Math.cos(b) * r, (float) Math.sin(b) * r);
+                      path.close();
+                      paint.setColor(withAlpha(facetColors[i % facetColors.length], (int) (alpha * 0.72f)));
+                      canvas.drawPath(path, paint);
+                  }
+                  stroke.setStrokeWidth(Math.max(1f, r * 0.045f));
+                  stroke.setColor(withAlpha(Color.rgb(255, 142, 62), (int) (alpha * 0.78f)));
+                  path.reset();
+                  path.moveTo(-r * 0.62f, -r * 0.28f);
+                  path.lineTo(-r * 0.22f, -r * 0.08f);
+                  path.lineTo(-r * 0.35f, r * 0.20f);
+                  path.lineTo(r * 0.12f, r * 0.34f);
+                  path.lineTo(r * 0.42f, r * 0.68f);
+                  canvas.drawPath(path, stroke);
+                  paint.setColor(withAlpha(Color.rgb(40, 30, 31), (int) (alpha * 0.82f)));
+                  canvas.drawOval(r * 0.18f, -r * 0.64f, r * 0.69f, -r * 0.18f, paint);
+                  canvas.drawOval(-r * 0.70f, r * 0.28f, -r * 0.30f, r * 0.62f, paint);
+              }
+          
+              private void drawMoonSurface(Canvas canvas, float r, int alpha) {
+                  // 月球：大块灰色月海和一个醒目的环形坑。
+                  paint.setColor(withAlpha(Color.rgb(91, 99, 113), (int) (alpha * 0.54f)));
+                  canvas.drawOval(-r * 0.76f, -r * 0.28f, -r * 0.08f, r * 0.35f, paint);
+                  canvas.drawOval(r * 0.08f, -r * 0.70f, r * 0.62f, -r * 0.18f, paint);
+                  canvas.drawOval(r * 0.22f, r * 0.23f, r * 0.78f, r * 0.68f, paint);
+                  drawCraters(canvas, r, alpha, 1);
+                  stroke.setStrokeWidth(Math.max(1f, r * 0.050f));
+                  stroke.setColor(withAlpha(Color.rgb(238, 243, 249), (int) (alpha * 0.64f)));
+                  canvas.drawCircle(-r * 0.26f, r * 0.32f, r * 0.20f, stroke);
+              }
+          
+              private void drawMercurySurface(Canvas canvas, float r, int alpha) {
+                  // 水星：铜金色表面与放射状卡洛里盆地。
+                  drawCraters(canvas, r, alpha, 2);
+                  float cx = r * 0.24f;
+                  float cy = r * 0.16f;
+                  stroke.setStrokeWidth(Math.max(0.9f, r * 0.022f));
+                  stroke.setColor(withAlpha(Color.rgb(255, 226, 166), (int) (alpha * 0.72f)));
+                  for (int i = 0; i < 10; i++) {
+                      double a = Math.PI * 2.0 * i / 10.0;
+                      canvas.drawLine(cx + (float) Math.cos(a) * r * 0.20f,
+                              cy + (float) Math.sin(a) * r * 0.20f,
+                              cx + (float) Math.cos(a) * r * 0.61f,
+                              cy + (float) Math.sin(a) * r * 0.61f, stroke);
+                  }
+                  paint.setColor(withAlpha(Color.rgb(104, 78, 57), (int) (alpha * 0.86f)));
+                  canvas.drawCircle(cx, cy, r * 0.19f, paint);
+                  stroke.setStrokeWidth(Math.max(1f, r * 0.035f));
+                  stroke.setColor(withAlpha(Color.rgb(247, 203, 128), (int) (alpha * 0.76f)));
+                  canvas.drawCircle(cx, cy, r * 0.22f, stroke);
+              }
+          
+              private void drawCraters(Canvas canvas, float r, int alpha, int level) {
+                  int count = 7 + level * 4;
+                  for (int i = 0; i < count; i++) {
+                      double a = i * 2.399963229728653 + level;
+                      float rr = r * (0.16f + 0.66f * ((i * 43 + 17) % 97) / 97f);
+                      float x = (float) Math.cos(a) * rr;
+                      float y = (float) Math.sin(a) * rr;
+                      float cr = r * (0.045f + ((i * 13) % 7) * 0.012f);
+                      paint.setColor(withAlpha(Color.BLACK, (int) (alpha * 0.34f)));
+                      canvas.drawCircle(x + cr * 0.16f, y + cr * 0.20f, cr, paint);
+                      paint.setColor(withAlpha(Color.WHITE, (int) (alpha * 0.23f)));
+                      canvas.drawCircle(x - cr * 0.16f, y - cr * 0.18f, cr * 0.74f, paint);
+                  }
+              }
+          
+              private void drawMars(Canvas canvas, float r, int alpha) {
+                  paint.setColor(withAlpha(Color.rgb(89, 46, 38), (int) (alpha * 0.45f)));
+                  canvas.drawOval(-r * 0.74f, -r * 0.18f, -r * 0.10f, r * 0.28f, paint);
+                  canvas.drawOval(r * 0.08f, r * 0.12f, r * 0.72f, r * 0.53f, paint);
+                  paint.setColor(withAlpha(Color.rgb(241, 214, 183), (int) (alpha * 0.58f)));
+                  canvas.drawOval(-r * 0.60f, -r * 1.03f, r * 0.58f, -r * 0.75f, paint);
+                  drawCraters(canvas, r, alpha / 2, 0);
+              }
+          
+              private void drawVenus(Canvas canvas, float r, int alpha) {
+                  stroke.setStrokeWidth(r * 0.13f);
+                  stroke.setColor(withAlpha(Color.rgb(250, 221, 151), (int) (alpha * 0.38f)));
+                  for (int i = -4; i <= 4; i++) {
+                      float y = i * r * 0.23f;
+                      path.reset();
+                      path.moveTo(-r, y - r * 0.08f);
+                      path.cubicTo(-r * 0.35f, y + r * 0.18f, r * 0.32f, y - r * 0.18f, r, y + r * 0.06f);
+                      canvas.drawPath(path, stroke);
+                  }
+              }
+          
+              private void drawEarth(Canvas canvas, float r, int alpha) {
+                  paint.setColor(withAlpha(Color.rgb(72, 164, 92), (int) (alpha * 0.92f)));
+                  path.reset();
+                  path.moveTo(-r * 0.72f, -r * 0.55f);
+                  path.cubicTo(-r * 0.32f, -r * 0.78f, -r * 0.08f, -r * 0.46f, r * 0.08f, -r * 0.25f);
+                  path.cubicTo(r * 0.21f, -r * 0.02f, -r * 0.05f, r * 0.11f, -r * 0.18f, r * 0.28f);
+                  path.cubicTo(-r * 0.34f, r * 0.52f, -r * 0.61f, r * 0.26f, -r * 0.55f, r * 0.02f);
+                  path.close();
+                  canvas.drawPath(path, paint);
+                  path.reset();
+                  path.moveTo(r * 0.27f, -r * 0.42f);
+                  path.cubicTo(r * 0.62f, -r * 0.52f, r * 0.86f, -r * 0.16f, r * 0.72f, r * 0.05f);
+                  path.cubicTo(r * 0.57f, r * 0.27f, r * 0.44f, r * 0.60f, r * 0.16f, r * 0.72f);
+                  path.cubicTo(-r * 0.02f, r * 0.37f, r * 0.08f, r * 0.10f, r * 0.27f, -r * 0.42f);
+                  path.close();
+                  canvas.drawPath(path, paint);
+                  stroke.setStrokeWidth(r * 0.055f);
+                  stroke.setColor(withAlpha(Color.WHITE, (int) (alpha * 0.54f)));
+                  for (int i = -2; i <= 2; i++) {
+                      float y = i * r * 0.31f;
+                      canvas.drawArc(-r, y - r * 0.12f, r, y + r * 0.15f, 12f, 116f, false, stroke);
+                  }
+                  paint.setColor(withAlpha(Color.WHITE, (int) (alpha * 0.84f)));
+                  canvas.drawOval(-r * 0.66f, -r * 1.02f, r * 0.62f, -r * 0.78f, paint);
+                  canvas.drawOval(-r * 0.54f, r * 0.77f, r * 0.48f, r * 1.02f, paint);
+              }
+          
+              private void drawGasBands(Canvas canvas, float r, int alpha, int bandColor, boolean jupiter) {
+                  stroke.setStrokeCap(Paint.Cap.BUTT);
+                  for (int i = -5; i <= 5; i++) {
+                      float y = i * r * 0.18f;
+                      float thickness = r * (0.075f + ((i + 7) % 3) * 0.025f);
+                      stroke.setStrokeWidth(thickness);
+                      int color = i % 2 == 0 ? bandColor : mix(bandColor, Color.WHITE, 0.43f);
+                      stroke.setColor(withAlpha(color, (int) (alpha * (jupiter ? 0.70f : 0.52f))));
+                      path.reset();
+                      path.moveTo(-r, y);
+                      path.cubicTo(-r * 0.35f, y + r * 0.07f, r * 0.32f, y - r * 0.07f, r, y);
+                      canvas.drawPath(path, stroke);
+                  }
+                  stroke.setStrokeCap(Paint.Cap.ROUND);
+                  if (jupiter) {
+                      paint.setColor(withAlpha(Color.rgb(174, 77, 55), (int) (alpha * 0.78f)));
+                      canvas.drawOval(r * 0.18f, r * 0.22f, r * 0.70f, r * 0.48f, paint);
+                      stroke.setStrokeWidth(r * 0.035f);
+                      stroke.setColor(withAlpha(Color.rgb(255, 208, 171), (int) (alpha * 0.55f)));
+                      canvas.drawOval(r * 0.23f, r * 0.26f, r * 0.65f, r * 0.44f, stroke);
+                  }
+              }
+          
+              private void drawSaturnBackRing(Canvas canvas, float r, int alpha) {
+                  canvas.save();
+                  canvas.rotate(-13f);
+                  stroke.setStrokeWidth(r * 0.34f);
+                  stroke.setColor(withAlpha(Color.rgb(181, 137, 79), (int) (alpha * 0.78f)));
+                  canvas.drawOval(-r * 1.42f, -r * 0.42f, r * 1.42f, r * 0.42f, stroke);
+                  stroke.setStrokeWidth(r * 0.12f);
+                  stroke.setColor(withAlpha(Color.rgb(255, 231, 170), (int) (alpha * 0.92f)));
+                  canvas.drawOval(-r * 1.42f, -r * 0.42f, r * 1.42f, r * 0.42f, stroke);
+                  canvas.restore();
+              }
+          
+              private void drawSolarBackRing(Canvas canvas, float r, int alpha) {
+                  canvas.save();
+                  canvas.rotate(18f);
+                  stroke.setStrokeWidth(r * 0.30f);
+                  stroke.setColor(withAlpha(Color.rgb(244, 112, 38), (int) (alpha * 0.62f)));
+                  canvas.drawOval(-r * 1.49f, -r * 0.43f, r * 1.49f, r * 0.43f, stroke);
+                  stroke.setStrokeWidth(r * 0.095f);
+                  stroke.setColor(withAlpha(Color.rgb(255, 238, 128), (int) (alpha * 0.94f)));
+                  canvas.drawOval(-r * 1.49f, -r * 0.43f, r * 1.49f, r * 0.43f, stroke);
+                  canvas.restore();
+              }
+          
+              private void drawSaturnFrontRing(Canvas canvas, float r, int alpha) {
+                  canvas.save();
+                  canvas.rotate(-13f);
+                  path.reset();
+                  path.moveTo(-r * 1.43f, 0f);
+                  path.cubicTo(-r * 0.84f, r * 0.47f, r * 0.84f, r * 0.47f, r * 1.43f, 0f);
+                  stroke.setStrokeWidth(r * 0.22f);
+                  stroke.setColor(withAlpha(Color.rgb(228, 200, 145), (int) (alpha * 0.86f)));
+                  canvas.drawPath(path, stroke);
+                  stroke.setStrokeWidth(r * 0.055f);
+                  stroke.setColor(withAlpha(Color.rgb(130, 94, 53), (int) (alpha * 0.62f)));
+                  canvas.drawPath(path, stroke);
+                  canvas.restore();
+              }
+          
+              private void drawSolarFrontRing(Canvas canvas, float r, int alpha) {
+                  canvas.save();
+                  canvas.rotate(18f);
+                  path.reset();
+                  path.moveTo(-r * 1.50f, 0f);
+                  path.cubicTo(-r * 0.84f, r * 0.49f, r * 0.84f, r * 0.49f, r * 1.50f, 0f);
+                  stroke.setStrokeWidth(r * 0.20f);
+                  stroke.setColor(withAlpha(Color.rgb(255, 190, 57), (int) (alpha * 0.96f)));
+                  canvas.drawPath(path, stroke);
+                  stroke.setStrokeWidth(r * 0.045f);
+                  stroke.setColor(withAlpha(Color.WHITE, (int) (alpha * 0.72f)));
+                  canvas.drawPath(path, stroke);
+                  canvas.restore();
+              }
+          
+              private void drawSunAura(Canvas canvas, float r, int alpha) {
+                  paint.setShader(new RadialGradient(0f, 0f, r * 1.43f,
+                          new int[]{withAlpha(Color.rgb(255, 224, 86), (int) (alpha * 0.38f)),
+                                  withAlpha(Color.rgb(255, 91, 25), (int) (alpha * 0.12f)),
+                                  Color.argb(0, 255, 91, 25)},
+                          new float[]{0.60f, 0.82f, 1f}, Shader.TileMode.CLAMP));
+                  canvas.drawCircle(0f, 0f, r * 1.43f, paint);
+                  paint.setShader(null);
+              }
+          
+              private void drawSunSurface(Canvas canvas, float r, int alpha) {
+                  stroke.setStrokeWidth(r * 0.055f);
+                  for (int i = 0; i < 12; i++) {
+                      double a = i * 2.399963229728653;
+                      float rr = r * (0.15f + ((i * 31) % 70) / 100f);
+                      float x = (float) Math.cos(a) * rr;
+                      float y = (float) Math.sin(a) * rr;
+                      stroke.setColor(withAlpha(i % 2 == 0 ? Color.rgb(255, 236, 123) : Color.rgb(211, 84, 24),
+                              (int) (alpha * 0.42f)));
+                      canvas.drawArc(x - r * 0.24f, y - r * 0.12f, x + r * 0.24f, y + r * 0.12f,
+                              i * 23f, 150f, false, stroke);
+                  }
+              }
+          
+              private static int withAlpha(int color, int alpha) {
+                  return Color.argb(Math.max(0, Math.min(255, alpha)),
+                          Color.red(color), Color.green(color), Color.blue(color));
+              }
+          
+              private static int mix(int a, int b, float t) {
+                  float u = Math.max(0f, Math.min(1f, t));
+                  return Color.rgb(
+                          (int) (Color.red(a) * (1f - u) + Color.red(b) * u),
+                          (int) (Color.green(a) * (1f - u) + Color.green(b) * u),
+                          (int) (Color.blue(a) * (1f - u) + Color.blue(b) * u));
+              }
+          }
+          WONDERMERGE_FILE_17
+
+          # FILE 18/18: app/src/main/java/com/qili/wondermerge/GameView.java (1245 lines)
+          cat > 'generated_project/app/src/main/java/com/qili/wondermerge/GameView.java' <<'WONDERMERGE_FILE_18'
+          package com.qili.wondermerge;
+          
+          import android.content.Context;
+          import android.content.SharedPreferences;
+          import android.graphics.Bitmap;
+          import android.graphics.Canvas;
+          import android.graphics.Color;
+          import android.graphics.DashPathEffect;
+          import android.graphics.LinearGradient;
+          import android.graphics.Paint;
+          import android.graphics.Path;
+          import android.graphics.RadialGradient;
+          import android.graphics.RectF;
+          import android.graphics.Shader;
+          import android.graphics.Typeface;
+          import android.os.Build;
+          import android.os.VibrationEffect;
+          import android.os.Vibrator;
+          import android.view.MotionEvent;
+          import android.view.View;
+          
+          import java.util.ArrayList;
+          import java.util.List;
+          import java.util.Locale;
+          
+          final class GameView extends View {
+              private enum ScreenState { MENU, GAME }
+          
+              private static final Typeface FONT_NORMAL =
+                      Typeface.create("sans-serif", Typeface.NORMAL);
+              private static final Typeface FONT_BOLD =
+                      Typeface.create("sans-serif", Typeface.BOLD);
+          
+              private static final class ScorePopup {
+                  float x;
+                  float y;
+                  float life = 0.85f;
+                  final String text;
+          
+                  ScorePopup(float x, float y, int score) {
+                      this.x = x;
+                      this.y = y;
+                      this.text = "+" + score;
+                  }
+              }
+          
+              private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+              private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+              private final Path path = new Path();
+              private final RectF tempRect = new RectF();
+              private final OrbRenderer orbRenderer = new OrbRenderer();
+              private final GameWorld world = new GameWorld();
+              private final SharedPreferences preferences;
+              private final ArrayList<ScorePopup> scorePopups = new ArrayList<>();
+          
+              private final RectF[] themeRects = {new RectF(), new RectF(), new RectF()};
+              private final RectF[] modeRects = {new RectF(), new RectF()};
+              private final RectF startRect = new RectF();
+              private final RectF backRect = new RectF();
+              private final RectF restartRect = new RectF();
+              private final RectF guideRect = new RectF();
+              private final RectF overlayRestartRect = new RectF();
+              private final RectF overlayMenuRect = new RectF();
+              private final RectF confirmYesRect = new RectF();
+              private final RectF confirmNoRect = new RectF();
+          
+              private final GameAudio gameAudio;
+              private final Vibrator vibrator;
+          
+              // 背景和复杂球体都只在尺寸/主题变化时重新栅格化，避免每帧创建大量渐变对象。
+              private Bitmap backgroundCache;
+              private ThemeData.ThemeKind backgroundTheme;
+              private boolean backgroundMenu;
+              private LinearGradient gameContainerGradient;
+              private ThemeData.ThemeKind gameContainerTheme;
+              private DashPathEffect warningDash;
+              private DashPathEffect guideDash;
+          
+              private ScreenState screenState = ScreenState.MENU;
+              private ThemeData.ThemeKind selectedTheme = ThemeData.ThemeKind.FRUIT;
+              private ThemeData.GameMode selectedMode = ThemeData.GameMode.VISIBLE;
+          
+              private boolean running = true;
+              private boolean aiming;
+              private boolean readyToDrop;
+              private boolean bestSaved;
+              private boolean guideEnabled = false;
+              private boolean restartConfirmVisible;
+              private long lastFrameNanos;
+              private float density;
+              private float screenW;
+              private float screenH;
+              private float worldLeft;
+              private float worldRight;
+              private float worldTop;
+              private float worldBottom;
+              private float warningLine;
+              private float heldX;
+              private int currentLevel;
+              private int nextLevel;
+              private float nextReadyDelay;
+              private int currentBest;
+          
+              GameView(Context context) {
+                  super(context);
+                  density = getResources().getDisplayMetrics().density;
+                  preferences = context.getSharedPreferences("wonder_merge_scores", Context.MODE_PRIVATE);
+                  int savedTheme = Math.max(0, Math.min(ThemeData.ThemeKind.values().length - 1,
+                          preferences.getInt("selected_theme", ThemeData.ThemeKind.FRUIT.ordinal())));
+                  int savedMode = Math.max(0, Math.min(ThemeData.GameMode.values().length - 1,
+                          preferences.getInt("selected_mode", ThemeData.GameMode.VISIBLE.ordinal())));
+                  selectedTheme = ThemeData.ThemeKind.values()[savedTheme];
+                  selectedMode = ThemeData.GameMode.values()[savedMode];
+                  vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                  gameAudio = new GameAudio(context);
+                  stroke.setStyle(Paint.Style.STROKE);
+                  stroke.setStrokeCap(Paint.Cap.ROUND);
+                  stroke.setStrokeJoin(Paint.Join.ROUND);
+                  setWillNotDraw(false);
+                  setFocusable(true);
+                  setClickable(true);
+              }
+          
+              @Override
+              protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+                  screenW = w;
+                  screenH = h;
+                  density = getResources().getDisplayMetrics().density;
+                  clearBackgroundCache();
+                  orbRenderer.clearCache();
+                  gameContainerGradient = null;
+                  warningDash = new DashPathEffect(new float[]{dp(8f), dp(7f)}, 0f);
+                  guideDash = new DashPathEffect(new float[]{dp(4f), dp(6f)}, 0f);
+                  calculateWorldBounds();
+                  if (heldX == 0f) heldX = screenW * 0.5f;
+              }
+          
+              private void calculateWorldBounds() {
+                  float side = dp(13f);
+                  worldLeft = side;
+                  worldRight = screenW - side;
+                  worldTop = dp(116f);
+                  worldBottom = screenH - dp(18f);
+                  warningLine = worldTop + Math.min(dp(102f), screenH * 0.115f);
+                  world.configure(worldLeft, worldRight, worldTop, worldBottom, warningLine);
+              }
+          
+              @Override
+              protected void onDraw(Canvas canvas) {
+                  super.onDraw(canvas);
+                  // 每帧从确定的画笔状态开始，避免 Shader/PathEffect 跨绘制阶段残留造成闪色。
+                  paint.setStyle(Paint.Style.FILL);
+                  paint.setShader(null);
+                  stroke.setStyle(Paint.Style.STROKE);
+                  stroke.setShader(null);
+                  stroke.setPathEffect(null);
+                  long now = System.nanoTime();
+                  float dt = lastFrameNanos == 0L ? 0f : (now - lastFrameNanos) / 1_000_000_000f;
+                  lastFrameNanos = now;
+                  if (!running) dt = 0f;
+          
+                  if (screenState == ScreenState.GAME) {
+                      if (!restartConfirmVisible) updateGame(dt);
+                      drawGame(canvas);
+                  } else {
+                      drawMenu(canvas);
+                  }
+          
+                  // 菜单和已静止的结算页不再空转 60 FPS；游戏中才维持逐帧更新。
+                  boolean needsAnimation = screenState == ScreenState.GAME
+                          && !restartConfirmVisible
+                          && (!world.isGameOver()
+                          || !world.particles().isEmpty()
+                          || !scorePopups.isEmpty());
+                  if (running && needsAnimation) postInvalidateOnAnimation();
+              }
+          
+              private void updateGame(float dt) {
+                  if (dt <= 0f) return;
+                  world.update(dt);
+          
+                  for (GameWorld.ImpactEvent event : world.consumeImpactEvents()) {
+                      gameAudio.playImpact(event.strength, selectedTheme);
+                  }
+          
+                  List<GameWorld.MergeEvent> events = world.consumeMergeEvents();
+                  if (!events.isEmpty()) {
+                      for (GameWorld.MergeEvent event : events) {
+                          scorePopups.add(new ScorePopup(event.x, event.y, event.gainedScore));
+                      }
+                      playMergeFeedback(events.get(events.size() - 1).newLevel);
+                  }
+          
+                  for (int i = scorePopups.size() - 1; i >= 0; i--) {
+                      ScorePopup popup = scorePopups.get(i);
+                      popup.life -= dt;
+                      popup.y -= dp(28f) * dt;
+                      if (popup.life <= 0f) scorePopups.remove(i);
+                  }
+          
+                  if (!readyToDrop && !world.isGameOver()) {
+                      nextReadyDelay -= dt;
+                      if (nextReadyDelay <= 0f) {
+                          if (selectedMode == ThemeData.GameMode.VISIBLE) {
+                              currentLevel = nextLevel;
+                              nextLevel = world.randomSpawnLevel();
+                          } else {
+                              currentLevel = world.randomSpawnLevel();
+                          }
+                          heldX = clamp(heldX,
+                                  worldLeft + world.radiusFor(currentLevel),
+                                  worldRight - world.radiusFor(currentLevel));
+                          readyToDrop = true;
+                      }
+                  }
+          
+                  if (world.score() > currentBest) {
+                      currentBest = world.score();
+                      saveBest(currentBest);
+                  }
+                  if (world.isGameOver() && !bestSaved) {
+                      bestSaved = true;
+                      saveBest(Math.max(currentBest, world.score()));
+                      playGameOverFeedback();
+                  }
+              }
+          
+              private void startGame() {
+                  world.reset();
+                  scorePopups.clear();
+                  screenState = ScreenState.GAME;
+                  restartConfirmVisible = false;
+                  currentLevel = world.randomSpawnLevel();
+                  nextLevel = world.randomSpawnLevel();
+                  readyToDrop = true;
+                  bestSaved = false;
+                  aiming = false;
+                  nextReadyDelay = 0f;
+                  heldX = screenW * 0.5f;
+                  currentBest = loadBest(selectedTheme, selectedMode);
+                  lastFrameNanos = System.nanoTime();
+                  invalidate();
+              }
+          
+              private void dropCurrent() {
+                  if (!readyToDrop || world.isGameOver()) return;
+                  float radius = world.radiusFor(currentLevel);
+                  heldX = clamp(heldX, worldLeft + radius, worldRight - radius);
+                  world.drop(currentLevel, heldX);
+                  readyToDrop = false;
+                  nextReadyDelay = 0.34f;
+                  aiming = false;
+                  gameAudio.playDrop(selectedTheme);
+                  vibrate(10);
+              }
+          
+              private void drawMenu(Canvas canvas) {
+                  drawBackground(canvas, selectedTheme, true);
+          
+                  float top = dp(34f);
+                  paint.setShader(null);
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(34f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText("万象合成", screenW * 0.5f, top + dp(30f), paint);
+          
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(13.5f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText("碰撞、合成，再创造一个完整世界", screenW * 0.5f, top + dp(55f), paint);
+          
+                  float sectionY = top + dp(82f);
+                  drawSectionLabel(canvas, "选择主题", sectionY);
+                  float cardGap = dp(8f);
+                  float cardW = (screenW - dp(28f) - cardGap * 2f) / 3f;
+                  float cardH = dp(126f);
+                  float cardTop = sectionY + dp(14f);
+                  for (int i = 0; i < themeRects.length; i++) {
+                      float l = dp(14f) + i * (cardW + cardGap);
+                      themeRects[i].set(l, cardTop, l + cardW, cardTop + cardH);
+                      drawThemeCard(canvas, ThemeData.ThemeKind.values()[i], themeRects[i],
+                              selectedTheme.ordinal() == i);
+                  }
+          
+                  float modeLabelY = cardTop + cardH + dp(26f);
+                  drawSectionLabel(canvas, "选择模式", modeLabelY);
+                  float modeTop = modeLabelY + dp(14f);
+                  float modeGap = dp(10f);
+                  float modeW = (screenW - dp(28f) - modeGap) / 2f;
+                  float modeH = dp(92f);
+                  for (int i = 0; i < modeRects.length; i++) {
+                      float l = dp(14f) + i * (modeW + modeGap);
+                      modeRects[i].set(l, modeTop, l + modeW, modeTop + modeH);
+                      drawModeCard(canvas, ThemeData.GameMode.values()[i], modeRects[i],
+                              selectedMode.ordinal() == i);
+                  }
+          
+                  float scoreTop = modeTop + modeH + dp(14f);
+                  tempRect.set(dp(14f), scoreTop, screenW - dp(14f), scoreTop + dp(68f));
+                  drawGlassPanel(canvas, tempRect, 0.82f, dp(18f));
+                  paint.setTextAlign(Paint.Align.LEFT);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(12f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText(selectedTheme.title + "主题最高分", tempRect.left + dp(16f), tempRect.top + dp(22f), paint);
+                  drawBestColumn(canvas, "随机", loadBest(selectedTheme, ThemeData.GameMode.RANDOM),
+                          tempRect.left + tempRect.width() * 0.53f, tempRect.centerY() + dp(7f));
+                  drawBestColumn(canvas, "可视", loadBest(selectedTheme, ThemeData.GameMode.VISIBLE),
+                          tempRect.left + tempRect.width() * 0.79f, tempRect.centerY() + dp(7f));
+          
+                  float startTop = scoreTop + dp(82f);
+                  startRect.set(dp(25f), startTop, screenW - dp(25f), startTop + dp(58f));
+                  drawStartButton(canvas, startRect);
+          
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(11.5f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText("拖动定位，松手投放；相同物体相撞后升级", screenW * 0.5f,
+                          Math.min(screenH - dp(24f), startRect.bottom + dp(31f)), paint);
+              }
+          
+              private void drawThemeCard(Canvas canvas, ThemeData.ThemeKind theme, RectF rect, boolean selected) {
+                  drawGlassPanel(canvas, rect, selected ? 0.93f : 0.72f, dp(18f));
+                  if (selected) {
+                      stroke.setShader(null);
+                      stroke.setStrokeWidth(dp(2.1f));
+                      stroke.setColor(accentColor());
+                      canvas.drawRoundRect(rect, dp(18f), dp(18f), stroke);
+                  }
+                  float iconR = Math.min(rect.width(), rect.height()) * 0.245f;
+                  // 星球主题入口直接展示辨识度最高的质感星环行星。
+                  orbRenderer.draw(canvas, theme, theme == ThemeData.ThemeKind.PLANET ? 8 : 4,
+                          rect.centerX(), rect.top + dp(42f), iconR, 0f, 255, true);
+                  paint.setShader(null);
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(15f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText(theme.title, rect.centerX(), rect.top + dp(84f), paint);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(10.5f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText(theme.subtitle, rect.centerX(), rect.top + dp(104f), paint);
+              }
+          
+              private void drawModeCard(Canvas canvas, ThemeData.GameMode mode, RectF rect, boolean selected) {
+                  drawGlassPanel(canvas, rect, selected ? 0.93f : 0.72f, dp(17f));
+                  if (selected) {
+                      stroke.setStrokeWidth(dp(2f));
+                      stroke.setColor(accentColor());
+                      stroke.setShader(null);
+                      canvas.drawRoundRect(rect, dp(17f), dp(17f), stroke);
+                  }
+                  float iconX = rect.left + dp(27f);
+                  float iconY = rect.centerY();
+                  paint.setStyle(Paint.Style.FILL);
+                  paint.setShader(null);
+                  paint.setColor(selected ? accentColor() : withAlpha(textSecondary(), 210));
+                  canvas.drawCircle(iconX, iconY, dp(13f), paint);
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(13f));
+                  paint.setColor(usesLightPanels() ? Color.rgb(38, 57, 65) : Color.WHITE);
+                  canvas.drawText(mode == ThemeData.GameMode.RANDOM ? "?" : "2", iconX, iconY + dp(4.5f), paint);
+          
+                  paint.setTextAlign(Paint.Align.LEFT);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(13.5f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText(mode.title, rect.left + dp(50f), rect.top + dp(32f), paint);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(9.8f));
+                  paint.setColor(textSecondary());
+                  drawTwoLineText(canvas, mode.subtitle, rect.left + dp(50f), rect.top + dp(53f), rect.right - dp(10f), dp(14f));
+              }
+          
+              private void drawBestColumn(Canvas canvas, String label, int score, float x, float y) {
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(10.5f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText(label, x, y - dp(13f), paint);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(19f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText(String.valueOf(score), x, y + dp(10f), paint);
+              }
+          
+              private void drawStartButton(Canvas canvas, RectF rect) {
+                  int c1;
+                  int c2;
+                  switch (selectedTheme) {
+                      case JELLYFISH:
+                          c1 = Color.rgb(84, 205, 231);
+                          c2 = Color.rgb(122, 87, 232);
+                          break;
+                      case PLANET:
+                          c1 = Color.rgb(98, 139, 255);
+                          c2 = Color.rgb(169, 91, 235);
+                          break;
+                      case FRUIT:
+                      default:
+                          c1 = Color.rgb(239, 154, 58);
+                          c2 = Color.rgb(214, 79, 61);
+                          break;
+                  }
+                  paint.setShader(new LinearGradient(rect.left, rect.top, rect.right, rect.bottom,
+                          c1, c2, Shader.TileMode.CLAMP));
+                  canvas.drawRoundRect(rect, dp(20f), dp(20f), paint);
+                  paint.setShader(null);
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(18f));
+                  paint.setColor(Color.WHITE);
+                  canvas.drawText("开始游戏", rect.centerX(), rect.centerY() + dp(6f), paint);
+              }
+          
+              private void drawGame(Canvas canvas) {
+                  drawBackground(canvas, selectedTheme, false);
+                  drawGameContainer(canvas);
+                  drawHud(canvas);
+                  drawWorldObjects(canvas);
+                  drawHeldObject(canvas);
+                  drawParticles(canvas);
+                  drawScorePopups(canvas);
+                  if (world.isGameOver()) drawGameOverOverlay(canvas);
+                  if (restartConfirmVisible) drawRestartConfirmation(canvas);
+              }
+          
+              private void drawGameContainer(Canvas canvas) {
+                  tempRect.set(worldLeft, worldTop, worldRight, worldBottom);
+                  if (gameContainerGradient == null || gameContainerTheme != selectedTheme) {
+                      gameContainerGradient = new LinearGradient(worldLeft, worldTop, worldLeft, worldBottom,
+                              gameContainerTop(), gameContainerBottom(), Shader.TileMode.CLAMP);
+                      gameContainerTheme = selectedTheme;
+                  }
+                  paint.setShader(gameContainerGradient);
+                  canvas.drawRoundRect(tempRect, dp(22f), dp(22f), paint);
+                  paint.setShader(null);
+          
+                  stroke.setStrokeWidth(dp(1.5f));
+                  stroke.setColor(containerBorder());
+                  stroke.setPathEffect(null);
+                  canvas.drawRoundRect(tempRect, dp(22f), dp(22f), stroke);
+          
+                  float danger = world.dangerRatio();
+                  stroke.setStrokeWidth(dp(1.4f) + dp(1.4f) * danger);
+                  stroke.setPathEffect(warningDash);
+                  int lineColor = blend(containerLine(), Color.rgb(255, 76, 76), danger);
+                  stroke.setColor(withAlpha(lineColor, (int) (150 + 105 * danger)));
+                  canvas.drawLine(worldLeft + dp(10f), warningLine, worldRight - dp(10f), warningLine, stroke);
+                  stroke.setPathEffect(null);
+          
+                  paint.setShader(null);
+                  paint.setTextAlign(Paint.Align.LEFT);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(9f));
+                  paint.setColor(withAlpha(lineColor, (int) (145 + danger * 90)));
+                  canvas.drawText(danger > 0.05f ? "危险：请尽快合成" : "警戒线",
+                          worldLeft + dp(15f), warningLine - dp(7f), paint);
+              }
+          
+              private void drawHud(Canvas canvas) {
+                  float top = dp(16f);
+                  float buttonSize = dp(42f);
+                  backRect.set(dp(13f), top, dp(13f) + buttonSize, top + buttonSize);
+                  restartRect.set(screenW - dp(13f) - buttonSize, top,
+                          screenW - dp(13f), top + buttonSize);
+                  guideRect.set(restartRect.left - dp(9f) - buttonSize, top,
+                          restartRect.left - dp(9f), top + buttonSize);
+                  drawCircleButton(canvas, backRect, "‹");
+                  drawGuideToggleButton(canvas, guideRect);
+                  drawCircleButton(canvas, restartRect, "↻");
+          
+                  // 分数直接悬浮显示，不再绘制多余的卡片边框。
+                  float scoreX = screenW * 0.5f;
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(9.5f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText("得分", scoreX, top + dp(9f), paint);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(25f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText(String.valueOf(world.score()), scoreX, top + dp(36f), paint);
+          
+                  float infoTop = top + dp(53f);
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(10.5f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText(selectedTheme.title + " · " + (selectedMode == ThemeData.GameMode.RANDOM ? "随机" : "可视"),
+                          screenW * 0.5f, infoTop, paint);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(9.2f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText("最高 " + currentBest, screenW * 0.5f, infoTop + dp(15f), paint);
+          
+                  if (selectedMode == ThemeData.GameMode.VISIBLE) {
+                      float nextX = screenW - dp(42f);
+                      float nextY = dp(90f);
+                      paint.setTextAlign(Paint.Align.CENTER);
+                      paint.setTypeface(FONT_BOLD);
+                      paint.setTextSize(dp(8.5f));
+                      paint.setColor(textSecondary());
+                      canvas.drawText("下一个", nextX, nextY - dp(16f), paint);
+                      orbRenderer.draw(canvas, selectedTheme, nextLevel, nextX, nextY,
+                              Math.min(dp(15f), world.radiusFor(nextLevel) * 0.60f), 0f, 255, true);
+                  } else {
+                      float qx = screenW - dp(42f);
+                      float qy = dp(89f);
+                      paint.setColor(withAlpha(textSecondary(), 48));
+                      canvas.drawCircle(qx, qy, dp(15f), paint);
+                      paint.setTextAlign(Paint.Align.CENTER);
+                      paint.setTypeface(FONT_BOLD);
+                      paint.setTextSize(dp(15f));
+                      paint.setColor(textSecondary());
+                      canvas.drawText("?", qx, qy + dp(5f), paint);
+                  }
+              }
+          
+              private void drawCircleButton(Canvas canvas, RectF rect, String symbol) {
+                  drawGlassPanel(canvas, rect, 0.75f, rect.width() * 0.5f);
+                  paint.setShader(null);
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(symbol.equals("‹") ? dp(30f) : dp(20f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText(symbol, rect.centerX(), rect.centerY() + (symbol.equals("‹") ? dp(8f) : dp(6f)), paint);
+              }
+          
+              private void drawGuideToggleButton(Canvas canvas, RectF rect) {
+                  drawGlassPanel(canvas, rect, guideEnabled ? 0.92f : 0.72f, rect.width() * 0.5f);
+                  float cx = rect.centerX();
+                  if (guideEnabled) {
+                      paint.setShader(null);
+                      paint.setColor(withAlpha(accentColor(), 34));
+                      canvas.drawCircle(cx, rect.centerY(), rect.width() * 0.42f, paint);
+                      stroke.setStrokeWidth(dp(1.4f));
+                      stroke.setColor(withAlpha(accentColor(), 205));
+                      canvas.drawCircle(cx, rect.centerY(), rect.width() * 0.42f, stroke);
+                  }
+                  int iconColor = guideEnabled ? accentColor() : textSecondary();
+                  paint.setColor(withAlpha(iconColor, 235));
+                  canvas.drawCircle(cx, rect.top + dp(10.5f), dp(3.1f), paint);
+                  stroke.setStrokeWidth(dp(1.25f));
+                  stroke.setColor(withAlpha(iconColor, 220));
+                  stroke.setPathEffect(guideDash);
+                  canvas.drawLine(cx, rect.top + dp(16f), cx, rect.bottom - dp(8f), stroke);
+                  stroke.setPathEffect(null);
+              }
+          
+              private void drawWorldObjects(Canvas canvas) {
+                  for (GameWorld.Body body : world.bodies()) {
+                      // 松手后先保持与手持预览完全相同的外观，再平滑接入碰撞形变。
+                      // 这样不会因第一帧的旋转/缩放重采样而产生“透明度闪一下”的错觉。
+                      float visualBlend = clamp((body.age - 0.10f) / 0.16f, 0f, 1f);
+                      visualBlend = visualBlend * visualBlend * (3f - 2f * visualBlend);
+                      float squash = body.squash * visualBlend;
+                      float visualAngle = selectedTheme == ThemeData.ThemeKind.JELLYFISH
+                              ? body.angle * 0.10f * visualBlend : body.angle * visualBlend;
+                      canvas.save();
+                      canvas.translate(body.x, body.y);
+                      canvas.scale(1f + squash, 1f - squash);
+                      orbRenderer.draw(canvas, selectedTheme, body.level, 0f, 0f,
+                              body.radius, visualAngle, 255, false);
+                      canvas.restore();
+                  }
+              }
+          
+              private void drawHeldObject(Canvas canvas) {
+                  if (!readyToDrop || world.isGameOver()) return;
+                  float radius = world.radiusFor(currentLevel);
+                  heldX = clamp(heldX, worldLeft + radius, worldRight - radius);
+                  // 和物理世界使用完全相同的出生位置与角度，松手前后不会跳位或闪一下。
+                  float y = world.spawnYFor(currentLevel);
+          
+                  if (guideEnabled) {
+                      stroke.setStrokeWidth(dp(1f));
+                      stroke.setColor(withAlpha(containerLine(), 112));
+                      stroke.setPathEffect(guideDash);
+                      canvas.drawLine(heldX, y + radius * 0.80f, heldX, worldBottom - dp(8f), stroke);
+                      stroke.setPathEffect(null);
+                  }
+          
+                  boolean crowded = world.isCrowdedNearSpawn(heldX, radius);
+                  orbRenderer.draw(canvas, selectedTheme, currentLevel, heldX, y, radius,
+                          0f, 255, true);
+                  if (crowded) {
+                      stroke.setShader(null);
+                      stroke.setStrokeWidth(dp(1.4f));
+                      stroke.setColor(Color.argb(180, 255, 92, 92));
+                      canvas.drawCircle(heldX, y, radius + dp(3f), stroke);
+                  }
+          
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(9.5f));
+                  paint.setColor(withAlpha(textPrimary(), 205));
+                  canvas.drawText(ThemeData.name(selectedTheme, currentLevel), heldX,
+                          Math.min(warningLine - dp(9f), y + radius + dp(13f)), paint);
+              }
+          
+              private void drawParticles(Canvas canvas) {
+                  for (GameWorld.Particle particle : world.particles()) {
+                      float ratio = particle.life / particle.maxLife;
+                      int color = ThemeData.primary(selectedTheme, particle.level);
+                      paint.setShader(null);
+                      paint.setColor(withAlpha(color, (int) (105 * ratio)));
+                      canvas.drawCircle(particle.x, particle.y, particle.size * 1.8f, paint);
+                      paint.setColor(withAlpha(Color.WHITE, (int) (230 * ratio)));
+                      canvas.drawCircle(particle.x, particle.y, particle.size * 0.58f, paint);
+                  }
+                  paint.setShader(null);
+              }
+          
+              private void drawScorePopups(Canvas canvas) {
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(15f));
+                  for (ScorePopup popup : scorePopups) {
+                      int alpha = (int) (255 * Math.min(1f, popup.life / 0.35f));
+                      paint.setColor(withAlpha(Color.WHITE, alpha));
+                      canvas.drawText(popup.text, popup.x, popup.y, paint);
+                  }
+              }
+          
+              private void drawGameOverOverlay(Canvas canvas) {
+                  paint.setShader(null);
+                  paint.setColor(Color.argb(166, 3, 8, 20));
+                  canvas.drawRect(0f, 0f, screenW, screenH, paint);
+          
+                  float panelW = Math.min(screenW - dp(34f), dp(340f));
+                  float panelH = dp(330f);
+                  float cx = screenW * 0.5f;
+                  float top = screenH * 0.5f - panelH * 0.5f;
+                  tempRect.set(cx - panelW * 0.5f, top, cx + panelW * 0.5f, top + panelH);
+                  if (selectedTheme == ThemeData.ThemeKind.FRUIT) {
+                      paint.setColor(Color.argb(246, 255, 249, 238));
+                  } else if (selectedTheme == ThemeData.ThemeKind.JELLYFISH) {
+                      paint.setColor(Color.argb(247, 224, 248, 252));
+                  } else {
+                      paint.setColor(Color.argb(244, 26, 34, 83));
+                  }
+                  canvas.drawRoundRect(tempRect, dp(26f), dp(26f), paint);
+                  stroke.setStrokeWidth(dp(1.5f));
+                  stroke.setColor(withAlpha(accentColor(), 180));
+                  canvas.drawRoundRect(tempRect, dp(26f), dp(26f), stroke);
+          
+                  float iconR = dp(42f);
+                  int showcaseLevel = Math.max(4, world.highestLevel());
+                  orbRenderer.draw(canvas, selectedTheme, showcaseLevel, cx, top + dp(68f),
+                          iconR, 0f, 255, true);
+          
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(25f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText("本局结束", cx, top + dp(129f), paint);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(11.5f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText("最高合成：" + ThemeData.name(selectedTheme, world.highestLevel()),
+                          cx, top + dp(153f), paint);
+          
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(39f));
+                  paint.setColor(accentColor());
+                  canvas.drawText(String.valueOf(world.score()), cx, top + dp(207f), paint);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(10.5f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText("本模式最高分 " + currentBest, cx, top + dp(229f), paint);
+          
+                  overlayRestartRect.set(tempRect.left + dp(22f), top + dp(251f),
+                          tempRect.right - dp(22f), top + dp(297f));
+                  paint.setShader(new LinearGradient(overlayRestartRect.left, overlayRestartRect.top,
+                          overlayRestartRect.right, overlayRestartRect.bottom,
+                          accentColor(), blend(accentColor(), Color.WHITE, 0.16f), Shader.TileMode.CLAMP));
+                  canvas.drawRoundRect(overlayRestartRect, dp(16f), dp(16f), paint);
+                  paint.setShader(null);
+                  paint.setTextSize(dp(15f));
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setColor(usesLightPanels() ? Color.WHITE : Color.rgb(13, 20, 52));
+                  canvas.drawText("再来一局", cx, overlayRestartRect.centerY() + dp(5f), paint);
+          
+                  overlayMenuRect.set(tempRect.left + dp(22f), top + dp(302f),
+                          tempRect.right - dp(22f), top + dp(326f));
+                  paint.setTextSize(dp(11f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText("返回主题选择", cx, overlayMenuRect.centerY() + dp(4f), paint);
+              }
+          
+              private void drawRestartConfirmation(Canvas canvas) {
+                  paint.setShader(null);
+                  paint.setColor(Color.argb(148, 4, 9, 22));
+                  canvas.drawRect(0f, 0f, screenW, screenH, paint);
+          
+                  float panelW = Math.min(screenW - dp(42f), dp(310f));
+                  float panelH = dp(176f);
+                  float cx = screenW * 0.5f;
+                  float top = screenH * 0.5f - panelH * 0.5f;
+                  tempRect.set(cx - panelW * 0.5f, top, cx + panelW * 0.5f, top + panelH);
+                  if (selectedTheme == ThemeData.ThemeKind.FRUIT) {
+                      paint.setColor(Color.rgb(255, 250, 240));
+                  } else if (selectedTheme == ThemeData.ThemeKind.JELLYFISH) {
+                      paint.setColor(Color.rgb(229, 249, 253));
+                  } else {
+                      paint.setColor(Color.rgb(31, 40, 94));
+                  }
+                  canvas.drawRoundRect(tempRect, dp(24f), dp(24f), paint);
+                  stroke.setStrokeWidth(dp(1.5f));
+                  stroke.setColor(withAlpha(accentColor(), 190));
+                  canvas.drawRoundRect(tempRect, dp(24f), dp(24f), stroke);
+          
+                  paint.setTextAlign(Paint.Align.CENTER);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(20f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText("确认重新开始吗？", cx, top + dp(47f), paint);
+                  paint.setTypeface(FONT_NORMAL);
+                  paint.setTextSize(dp(11f));
+                  paint.setColor(textSecondary());
+                  canvas.drawText("当前这一局的进度将不会保留", cx, top + dp(72f), paint);
+          
+                  float gap = dp(10f);
+                  float side = dp(18f);
+                  float buttonTop = top + dp(106f);
+                  float buttonW = (panelW - side * 2f - gap) * 0.5f;
+                  confirmNoRect.set(tempRect.left + side, buttonTop,
+                          tempRect.left + side + buttonW, buttonTop + dp(48f));
+                  confirmYesRect.set(confirmNoRect.right + gap, buttonTop,
+                          tempRect.right - side, buttonTop + dp(48f));
+          
+                  paint.setColor(withAlpha(textSecondary(), usesLightPanels() ? 24 : 38));
+                  canvas.drawRoundRect(confirmNoRect, dp(15f), dp(15f), paint);
+                  stroke.setStrokeWidth(dp(1f));
+                  stroke.setColor(withAlpha(textSecondary(), 105));
+                  canvas.drawRoundRect(confirmNoRect, dp(15f), dp(15f), stroke);
+                  paint.setShader(new LinearGradient(confirmYesRect.left, confirmYesRect.top,
+                          confirmYesRect.right, confirmYesRect.bottom,
+                          accentColor(), blend(accentColor(), Color.WHITE, 0.18f), Shader.TileMode.CLAMP));
+                  canvas.drawRoundRect(confirmYesRect, dp(15f), dp(15f), paint);
+                  paint.setShader(null);
+          
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(14f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText("否", confirmNoRect.centerX(), confirmNoRect.centerY() + dp(5f), paint);
+                  paint.setColor(usesLightPanels() ? Color.WHITE : Color.rgb(15, 22, 52));
+                  canvas.drawText("是", confirmYesRect.centerX(), confirmYesRect.centerY() + dp(5f), paint);
+              }
+          
+              private void drawBackground(Canvas canvas, ThemeData.ThemeKind theme, boolean menu) {
+                  int width = getWidth();
+                  int height = getHeight();
+                  if (width <= 0 || height <= 0) return;
+                  boolean stale = backgroundCache == null
+                          || backgroundCache.isRecycled()
+                          || backgroundCache.getWidth() != width
+                          || backgroundCache.getHeight() != height
+                          || backgroundTheme != theme
+                          || backgroundMenu != menu;
+                  if (stale) {
+                      clearBackgroundCache();
+                      try {
+                          backgroundCache = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                      } catch (OutOfMemoryError error) {
+                          // 少数超高分辨率、低内存设备退回即时绘制，功能仍然可用。
+                          renderBackground(canvas, theme, menu);
+                          return;
+                      }
+                      renderBackground(new Canvas(backgroundCache), theme, menu);
+                      backgroundTheme = theme;
+                      backgroundMenu = menu;
+                  }
+                  canvas.drawBitmap(backgroundCache, 0f, 0f, null);
+              }
+          
+              private void renderBackground(Canvas canvas, ThemeData.ThemeKind theme, boolean menu) {
+                  int topColor;
+                  int bottomColor;
+                  switch (theme) {
+                      case JELLYFISH:
+                          topColor = Color.rgb(183, 235, 246);
+                          bottomColor = Color.rgb(50, 143, 180);
+                          break;
+                      case PLANET:
+                          topColor = Color.rgb(73, 88, 160);
+                          bottomColor = Color.rgb(29, 32, 82);
+                          break;
+                      case FRUIT:
+                      default:
+                          topColor = Color.rgb(255, 248, 234);
+                          bottomColor = Color.rgb(245, 218, 183);
+                          break;
+                  }
+                  paint.setShader(new LinearGradient(0f, 0f, 0f, screenH, topColor, bottomColor, Shader.TileMode.CLAMP));
+                  canvas.drawRect(0f, 0f, screenW, screenH, paint);
+                  paint.setShader(null);
+          
+                  if (theme == ThemeData.ThemeKind.FRUIT) {
+                      drawFruitBackground(canvas, menu);
+                  } else if (theme == ThemeData.ThemeKind.JELLYFISH) {
+                      drawOceanBackground(canvas, menu);
+                  } else {
+                      drawSpaceBackground(canvas, menu);
+                  }
+              }
+          
+              private void clearBackgroundCache() {
+                  if (backgroundCache != null && !backgroundCache.isRecycled()) {
+                      backgroundCache.recycle();
+                  }
+                  backgroundCache = null;
+                  backgroundTheme = null;
+              }
+          
+              private void drawFruitBackground(Canvas canvas, boolean menu) {
+                  paint.setColor(Color.argb(24, 255, 255, 255));
+                  for (int i = 0; i < 12; i++) {
+                      float x = ((i * 83) % 101) / 101f * screenW;
+                      float y = ((i * 137 + 29) % 211) / 211f * screenH;
+                      float r = dp(18f + (i % 4) * 8f);
+                      canvas.drawCircle(x, y, r, paint);
+                  }
+                  paint.setColor(Color.argb(menu ? 34 : 20, 78, 139, 63));
+                  for (int i = 0; i < 7; i++) {
+                      float x = (i % 2 == 0 ? dp(8f) : screenW - dp(8f));
+                      float y = dp(90f + i * 126f);
+                      canvas.save();
+                      canvas.rotate(i % 2 == 0 ? -28f : 152f, x, y);
+                      canvas.drawOval(x - dp(9f), y - dp(25f), x + dp(9f), y + dp(25f), paint);
+                      canvas.restore();
+                  }
+              }
+          
+              private void drawOceanBackground(Canvas canvas, boolean menu) {
+                  // 水面天光与光柱均使用“同色透明端点”，避免透明黑插值产生暗带或闪色。
+                  float glowRadius = Math.max(screenW * 0.82f, screenH * 0.42f);
+                  paint.setShader(new RadialGradient(screenW * 0.16f, screenH * 0.03f, glowRadius,
+                          Color.argb(menu ? 150 : 112, 245, 255, 255),
+                          Color.argb(0, 245, 255, 255), Shader.TileMode.CLAMP));
+                  canvas.drawCircle(screenW * 0.16f, screenH * 0.03f, glowRadius, paint);
+          
+                  paint.setShader(new LinearGradient(screenW * 0.12f, 0f, screenW * 0.72f, screenH,
+                          Color.argb(menu ? 64 : 42, 219, 252, 255),
+                          Color.argb(0, 219, 252, 255), Shader.TileMode.CLAMP));
+                  path.reset();
+                  path.moveTo(screenW * 0.04f, 0f);
+                  path.lineTo(screenW * 0.31f, 0f);
+                  path.lineTo(screenW * 0.78f, screenH);
+                  path.lineTo(screenW * 0.56f, screenH);
+                  path.close();
+                  canvas.drawPath(path, paint);
+                  paint.setShader(null);
+          
+                  stroke.setShader(null);
+                  stroke.setStrokeWidth(dp(1.0f));
+                  stroke.setColor(Color.argb(menu ? 40 : 27, 231, 255, 255));
+                  for (int i = 0; i < 8; i++) {
+                      float y = screenH * (0.18f + i * 0.105f);
+                      float shift = (i % 2 == 0 ? -0.08f : 0.06f) * screenW;
+                      path.reset();
+                      path.moveTo(-screenW * 0.12f, y);
+                      path.cubicTo(screenW * 0.18f + shift, y - dp(11f),
+                              screenW * 0.58f + shift, y + dp(12f),
+                              screenW * 1.12f, y - dp(2f));
+                      canvas.drawPath(path, stroke);
+                  }
+          
+                  for (int i = 0; i < 34; i++) {
+                      float x = ((i * 67 + 13) % 101) / 101f * screenW;
+                      float y = ((i * 127 + 51) % 211) / 211f * screenH;
+                      float r = dp(1.2f + (i % 5) * 0.82f);
+                      paint.setColor(Color.argb(18 + (i % 4) * 8, 238, 255, 255));
+                      canvas.drawCircle(x, y, r, paint);
+                      stroke.setStrokeWidth(dp(0.8f));
+                      stroke.setColor(Color.argb(66, 228, 253, 255));
+                      canvas.drawCircle(x, y, r, stroke);
+                  }
+              }
+          
+              private void drawSpaceBackground(Canvas canvas, boolean menu) {
+                  float nebulaRadius = Math.max(screenW * 0.72f, screenH * 0.34f);
+                  paint.setShader(new RadialGradient(screenW * 0.84f, screenH * 0.22f,
+                          nebulaRadius,
+                          Color.argb(menu ? 110 : 76, 190, 112, 244),
+                          Color.argb(0, 190, 112, 244), Shader.TileMode.CLAMP));
+                  canvas.drawCircle(screenW * 0.84f, screenH * 0.22f, nebulaRadius, paint);
+                  paint.setShader(new RadialGradient(screenW * 0.08f, screenH * 0.72f,
+                          nebulaRadius * 0.88f,
+                          Color.argb(menu ? 76 : 50, 69, 205, 235),
+                          Color.argb(0, 69, 205, 235), Shader.TileMode.CLAMP));
+                  canvas.drawCircle(screenW * 0.08f, screenH * 0.72f, nebulaRadius * 0.88f, paint);
+                  paint.setShader(null);
+          
+                  for (int i = 0; i < 82; i++) {
+                      float x = ((i * 73 + 19) % 211) / 211f * screenW;
+                      float y = ((i * 131 + 7) % 307) / 307f * screenH;
+                      float r = dp(0.48f + (i % 5) * 0.19f);
+                      int a = 96 + (i % 6) * 25;
+                      int starColor = i % 9 == 0 ? Color.rgb(196, 235, 255)
+                              : (i % 13 == 0 ? Color.rgb(255, 224, 184) : Color.rgb(235, 240, 255));
+                      paint.setColor(withAlpha(starColor, Math.min(255, a)));
+                      canvas.drawCircle(x, y, r, paint);
+                      if (i % 17 == 0) {
+                          stroke.setStrokeWidth(dp(0.65f));
+                          stroke.setColor(withAlpha(starColor, 92));
+                          canvas.drawLine(x - r * 3f, y, x + r * 3f, y, stroke);
+                          canvas.drawLine(x, y - r * 3f, x, y + r * 3f, stroke);
+                      }
+                  }
+              }
+          
+              private void drawGlassPanel(Canvas canvas, RectF rect, float opacity, float radius) {
+                  int color;
+                  if (selectedTheme == ThemeData.ThemeKind.FRUIT) {
+                      color = Color.argb((int) (255 * opacity), 255, 252, 246);
+                  } else if (selectedTheme == ThemeData.ThemeKind.JELLYFISH) {
+                      color = Color.argb((int) (230 * opacity), 239, 252, 255);
+                  } else {
+                      color = Color.argb((int) (212 * opacity), 31, 40, 94);
+                  }
+                  paint.setShader(null);
+                  paint.setColor(color);
+                  canvas.drawRoundRect(rect, radius, radius, paint);
+                  stroke.setStrokeWidth(dp(1f));
+                  if (selectedTheme == ThemeData.ThemeKind.FRUIT) {
+                      stroke.setColor(Color.argb(55, 86, 72, 49));
+                  } else if (selectedTheme == ThemeData.ThemeKind.JELLYFISH) {
+                      stroke.setColor(Color.argb(100, 39, 143, 179));
+                  } else {
+                      stroke.setColor(Color.argb(92, 196, 211, 255));
+                  }
+                  canvas.drawRoundRect(rect, radius, radius, stroke);
+              }
+          
+              private void drawSectionLabel(Canvas canvas, String label, float y) {
+                  paint.setTextAlign(Paint.Align.LEFT);
+                  paint.setTypeface(FONT_BOLD);
+                  paint.setTextSize(dp(12.5f));
+                  paint.setColor(textPrimary());
+                  canvas.drawText(label, dp(16f), y, paint);
+              }
+          
+              private void drawTwoLineText(Canvas canvas, String text, float x, float y, float right, float lineHeight) {
+                  int mid = text.length() > 9 ? text.length() / 2 : text.length();
+                  if (mid >= text.length()) {
+                      canvas.drawText(text, x, y, paint);
+                  } else {
+                      canvas.drawText(text.substring(0, mid), x, y, paint);
+                      canvas.drawText(text.substring(mid), x, y + lineHeight, paint);
+                  }
+              }
+          
+              @Override
+              public boolean onTouchEvent(MotionEvent event) {
+                  float x = event.getX();
+                  float y = event.getY();
+          
+                  if (screenState == ScreenState.MENU) {
+                      if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+                          for (int i = 0; i < themeRects.length; i++) {
+                              if (themeRects[i].contains(x, y)) {
+                                  selectedTheme = ThemeData.ThemeKind.values()[i];
+                                  preferences.edit().putInt("selected_theme", i).apply();
+                                  vibrate(8);
+                                  invalidate();
+                                  return performClick();
+                              }
+                          }
+                          for (int i = 0; i < modeRects.length; i++) {
+                              if (modeRects[i].contains(x, y)) {
+                                  selectedMode = ThemeData.GameMode.values()[i];
+                                  preferences.edit().putInt("selected_mode", i).apply();
+                                  vibrate(8);
+                                  invalidate();
+                                  return performClick();
+                              }
+                          }
+                          if (startRect.contains(x, y)) {
+                              startGame();
+                              vibrate(14);
+                              return performClick();
+                          }
+                      }
+                      return true;
+                  }
+          
+                  if (restartConfirmVisible) {
+                      if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+                          if (confirmYesRect.contains(x, y)) {
+                              startGame();
+                              vibrate(16);
+                              return performClick();
+                          }
+                          if (confirmNoRect.contains(x, y)) {
+                              restartConfirmVisible = false;
+                              lastFrameNanos = System.nanoTime();
+                              invalidate();
+                              return performClick();
+                          }
+                      }
+                      return true;
+                  }
+          
+                  if (world.isGameOver()) {
+                      if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+                          if (overlayRestartRect.contains(x, y)) {
+                              startGame();
+                              return performClick();
+                          }
+                          if (overlayMenuRect.contains(x, y)) {
+                              screenState = ScreenState.MENU;
+                              invalidate();
+                              return performClick();
+                          }
+                      }
+                      return true;
+                  }
+          
+                  if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+                      if (backRect.contains(x, y)) {
+                          screenState = ScreenState.MENU;
+                          restartConfirmVisible = false;
+                          saveBest(Math.max(currentBest, world.score()));
+                          aiming = false;
+                          invalidate();
+                          return performClick();
+                      }
+                      if (guideRect.contains(x, y)) {
+                          guideEnabled = !guideEnabled;
+                          vibrate(8);
+                          invalidate();
+                          return performClick();
+                      }
+                      if (restartRect.contains(x, y)) {
+                          restartConfirmVisible = true;
+                          aiming = false;
+                          invalidate();
+                          return performClick();
+                      }
+                  }
+          
+                  switch (event.getActionMasked()) {
+                      case MotionEvent.ACTION_DOWN:
+                          if (readyToDrop && y >= worldTop - dp(8f)) {
+                              aiming = true;
+                              updateHeldX(x);
+                          }
+                          break;
+                      case MotionEvent.ACTION_MOVE:
+                          if (aiming && readyToDrop) updateHeldX(x);
+                          break;
+                      case MotionEvent.ACTION_UP:
+                          if (aiming && readyToDrop) {
+                              updateHeldX(x);
+                              dropCurrent();
+                              performClick();
+                          }
+                          aiming = false;
+                          break;
+                      case MotionEvent.ACTION_CANCEL:
+                          aiming = false;
+                          break;
+                      default:
+                          break;
+                  }
+                  return true;
+              }
+          
+              private void updateHeldX(float x) {
+                  float radius = world.radiusFor(currentLevel);
+                  heldX = clamp(x, worldLeft + radius, worldRight - radius);
+              }
+          
+              @Override
+              public boolean performClick() {
+                  super.performClick();
+                  return true;
+              }
+          
+              boolean handleBackPressed() {
+                  if (restartConfirmVisible) {
+                      restartConfirmVisible = false;
+                      lastFrameNanos = System.nanoTime();
+                      invalidate();
+                      return true;
+                  }
+                  if (screenState == ScreenState.GAME) {
+                      saveBest(Math.max(currentBest, world.score()));
+                      screenState = ScreenState.MENU;
+                      aiming = false;
+                      invalidate();
+                      return true;
+                  }
+                  return false;
+              }
+          
+              void pauseLoop() {
+                  running = false;
+                  lastFrameNanos = 0L;
+              }
+          
+              void resumeLoop() {
+                  running = true;
+                  lastFrameNanos = 0L;
+                  invalidate();
+              }
+          
+              @Override
+              protected void onDetachedFromWindow() {
+                  running = false;
+                  clearBackgroundCache();
+                  orbRenderer.clearCache();
+                  gameAudio.release();
+                  super.onDetachedFromWindow();
+              }
+          
+              private int loadBest(ThemeData.ThemeKind theme, ThemeData.GameMode mode) {
+                  return preferences.getInt(bestKey(theme, mode), 0);
+              }
+          
+              private void saveBest(int score) {
+                  if (score <= loadBest(selectedTheme, selectedMode)) return;
+                  preferences.edit().putInt(bestKey(selectedTheme, selectedMode), score).apply();
+                  currentBest = score;
+              }
+          
+              private static String bestKey(ThemeData.ThemeKind theme, ThemeData.GameMode mode) {
+                  return String.format(Locale.US, "best_%s_%s", theme.name(), mode.name());
+              }
+          
+              private void playMergeFeedback(int level) {
+                  vibrate(Math.min(30, 10 + level * 2));
+                  gameAudio.playMerge(level, selectedTheme);
+              }
+          
+              private void playGameOverFeedback() {
+                  vibrate(90);
+                  gameAudio.playGameOver();
+              }
+          
+              private void vibrate(long millis) {
+                  if (vibrator == null || !vibrator.hasVibrator()) return;
+                  try {
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          vibrator.vibrate(VibrationEffect.createOneShot(millis, VibrationEffect.DEFAULT_AMPLITUDE));
+                      } else {
+                          //noinspection deprecation
+                          vibrator.vibrate(millis);
+                      }
+                  } catch (SecurityException ignored) {
+                  }
+              }
+          
+              private int textPrimary() {
+                  if (selectedTheme == ThemeData.ThemeKind.FRUIT) return Color.rgb(64, 56, 47);
+                  if (selectedTheme == ThemeData.ThemeKind.JELLYFISH) return Color.rgb(20, 63, 82);
+                  return Color.rgb(244, 247, 255);
+              }
+          
+              private int textSecondary() {
+                  if (selectedTheme == ThemeData.ThemeKind.FRUIT) return Color.rgb(121, 105, 88);
+                  if (selectedTheme == ThemeData.ThemeKind.JELLYFISH) return Color.rgb(55, 103, 122);
+                  return Color.rgb(190, 204, 235);
+              }
+          
+              private int accentColor() {
+                  switch (selectedTheme) {
+                      case JELLYFISH:
+                          return Color.rgb(26, 158, 197);
+                      case PLANET:
+                          return Color.rgb(173, 188, 255);
+                      case FRUIT:
+                      default:
+                          return Color.rgb(226, 111, 57);
+                  }
+              }
+          
+              private int gameContainerTop() {
+                  switch (selectedTheme) {
+                      case JELLYFISH:
+                          return Color.argb(238, 83, 164, 190);
+                      case PLANET:
+                          return Color.argb(232, 36, 46, 108);
+                      case FRUIT:
+                      default:
+                          return Color.argb(230, 255, 250, 235);
+                  }
+              }
+          
+              private int gameContainerBottom() {
+                  switch (selectedTheme) {
+                      case JELLYFISH:
+                          return Color.argb(242, 31, 112, 151);
+                      case PLANET:
+                          return Color.argb(238, 19, 24, 68);
+                      case FRUIT:
+                      default:
+                          return Color.argb(235, 242, 218, 181);
+                  }
+              }
+          
+              private int containerBorder() {
+                  if (selectedTheme == ThemeData.ThemeKind.FRUIT) return Color.argb(95, 94, 70, 46);
+                  if (selectedTheme == ThemeData.ThemeKind.JELLYFISH) return Color.argb(150, 218, 250, 255);
+                  return Color.argb(132, 173, 209, 255);
+              }
+          
+              private int containerLine() {
+                  if (selectedTheme == ThemeData.ThemeKind.FRUIT) return Color.rgb(171, 104, 66);
+                  if (selectedTheme == ThemeData.ThemeKind.JELLYFISH) return Color.rgb(220, 250, 255);
+                  return Color.rgb(169, 213, 255);
+              }
+          
+              private boolean usesLightPanels() {
+                  return selectedTheme == ThemeData.ThemeKind.FRUIT
+                          || selectedTheme == ThemeData.ThemeKind.JELLYFISH;
+              }
+          
+              private float dp(float value) {
+                  return value * density;
+              }
+          
+              private static float clamp(float value, float min, float max) {
+                  return Math.max(min, Math.min(max, value));
+              }
+          
+              private static int withAlpha(int color, int alpha) {
+                  return Color.argb(Math.max(0, Math.min(255, alpha)),
+                          Color.red(color), Color.green(color), Color.blue(color));
+              }
+          
+              private static int blend(int a, int b, float t) {
+                  float u = Math.max(0f, Math.min(1f, t));
+                  return Color.rgb(
+                          (int) (Color.red(a) * (1f - u) + Color.red(b) * u),
+                          (int) (Color.green(a) * (1f - u) + Color.green(b) * u),
+                          (int) (Color.blue(a) * (1f - u) + Color.blue(b) * u));
+              }
+          }
+          WONDERMERGE_FILE_18
+
+
+          FILE_COUNT="$(find generated_project -type f | wc -l | tr -d ' ')"
+          test "$FILE_COUNT" -eq 18
+          test -s generated_project/settings.gradle
+          test -s generated_project/app/build.gradle
+          test -s generated_project/app/src/main/AndroidManifest.xml
+          test -s generated_project/app/src/main/java/com/qili/wondermerge/GameAudio.java
+          test -s generated_project/app/src/main/java/com/qili/wondermerge/GameView.java
+          test -s generated_project/app/src/main/java/com/qili/wondermerge/GameWorld.java
+          echo "Generated $FILE_COUNT readable project files successfully."
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.13'
+          # 单文件工作流不需要 setup-gradle 提前扫描仓库缓存。
+          cache-disabled: true
+
+      - name: Locate and prepare Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)"
+          fi
+
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "Android sdkmanager was not found under: $SDK_ROOT"
+            find "$SDK_ROOT" -maxdepth 4 -type f -name sdkmanager -print 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "Using Android SDK: $SDK_ROOT"
+          echo "Using sdkmanager: $SDKMANAGER"
+          "$SDKMANAGER" --version
+
+          if [ -w "$SDK_ROOT" ]; then
+            SDK_COMMAND=("$SDKMANAGER")
+          else
+            SDK_COMMAND=(sudo "$SDKMANAGER")
+          fi
+
+          yes | "${SDK_COMMAND[@]}" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+          "${SDK_COMMAND[@]}" --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;35.0.0"
+
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+
+      - name: Build debug APK
+        shell: bash
+        working-directory: generated_project
+        run: |
+          set -euo pipefail
+          gradle --version
+          gradle :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Collect and verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp generated_project/app/build/outputs/apk/debug/app-debug.apk WonderMerge-v7-debug.apk
+          test -s WonderMerge-v7-debug.apk
+          sha256sum WonderMerge-v7-debug.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: WonderMerge-v7-APK
+          path: WonderMerge-v7-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
