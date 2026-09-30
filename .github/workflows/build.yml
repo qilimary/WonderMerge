@@ -1,0 +1,137 @@
+name: Build WonderMerge APK (v39)
+
+# 两文件版：本文件放 .github/workflows/build.yml；android_project.py 放仓库根目录。
+# 请移除旧的超大工作流，避免旧文件继续导致解析失败或重复构建。
+# 六主题、玩法、存档兼容与 v38 优化全部保留；碰撞参数没有变化。
+# 构建会生成源码、图标及原始 PCM 音效，再打包并检查 APK。
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wondermerge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository image
+        uses: actions/checkout@v5
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 先生成项目，让 Gradle 能正确发现依赖与构建缓存。
+      - name: Generate Android project and PCM sounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s android_project.py
+          python3 android_project.py
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.13'
+          # 项目已在上一步生成，可以复用 Gradle 依赖及任务输出缓存。
+          cache-read-only: false
+
+      - name: Locate and prepare Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)"
+          fi
+
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "Android sdkmanager was not found under: $SDK_ROOT"
+            find "$SDK_ROOT" -maxdepth 4 -type f -name sdkmanager -print 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "Using Android SDK: $SDK_ROOT"
+          echo "Using sdkmanager: $SDKMANAGER"
+          "$SDKMANAGER" --version
+
+          if [ -w "$SDK_ROOT" ]; then
+            SDK_COMMAND=("$SDKMANAGER")
+          else
+            SDK_COMMAND=(sudo "$SDKMANAGER")
+          fi
+
+          yes | "${SDK_COMMAND[@]}" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+
+          install_android_packages() {
+            local attempt
+            for attempt in 1 2 3; do
+              echo "Installing Android SDK packages (attempt $attempt/3)..."
+              if "${SDK_COMMAND[@]}" --sdk_root="$SDK_ROOT" \
+                "platform-tools" \
+                "platforms;android-36" \
+                "build-tools;35.0.0"; then
+                return 0
+              fi
+              sleep $((attempt * 5))
+            done
+            echo "Android SDK package installation failed after three attempts." >&2
+            "$SDKMANAGER" --sdk_root="$SDK_ROOT" --list_installed || true
+            return 1
+          }
+          install_android_packages
+
+          test -f "$SDK_ROOT/platforms/android-36/android.jar"
+          test -d "$SDK_ROOT/build-tools/35.0.0"
+
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+
+      - name: Build optimized APK (existing debug signing)
+        shell: bash
+        working-directory: generated_project
+        run: |
+          set -euo pipefail
+          gradle --version
+          gradle :app:assembleDebug --build-cache --stacktrace --warning-mode all --no-daemon
+
+      - name: Collect and verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp generated_project/app/build/outputs/apk/debug/app-debug.apk WonderMerge-v39-debug.apk
+          test -s WonderMerge-v39-debug.apk
+          sha256sum WonderMerge-v39-debug.apk
+          python3 - <<'WONDERMERGE_VERIFY_APK'
+          from zipfile import ZipFile, ZIP_STORED
+          with ZipFile('WonderMerge-v39-debug.apk') as apk:
+              sounds = [entry for entry in apk.infolist() if entry.filename.startswith('assets/sounds/') and entry.filename.endswith('.wav')]
+              assert len(sounds) == 12, f'Expected 12 sound assets, got {len(sounds)}'
+              assert all(entry.compress_type == ZIP_STORED for entry in sounds), 'WAV assets must be uncompressed for SoundPool'
+              assert 'classes.dex' in apk.namelist() and 'AndroidManifest.xml' in apk.namelist()
+          print('Verified APK, DEX and 12 directly loadable sound assets.')
+          WONDERMERGE_VERIFY_APK
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: WonderMerge-v39-APK
+          path: WonderMerge-v39-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
